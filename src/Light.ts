@@ -11,7 +11,7 @@ export class Light {
 	public color: vec3;
 
 	// Shadow map properties
-	public shadowMapSize: number = 2048;
+	public shadowMapSize: number = 1024;
 	public shadowFramebuffer: WebGLFramebuffer;
 	public shadowTexture: WebGLTexture;
 
@@ -166,5 +166,21 @@ export class Light {
 
 	setTarget(x: number, y: number, z: number): void {
 		vec3.set(this.target, x, y, z);
+	}
+
+	/**
+	 * Follow a target position (e.g., the player) while maintaining relative offset
+	 */
+	followTarget(targetPos: vec3, offsetX: number, offsetY: number, offsetZ: number): void {
+		// Set light target to the follow target
+		vec3.copy(this.target, targetPos);
+
+		// Position light relative to target
+		vec3.set(
+			this.position,
+			targetPos[0] + offsetX,
+			targetPos[1] + offsetY,
+			targetPos[2] + offsetZ,
+		);
 	}
 }

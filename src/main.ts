@@ -4,6 +4,7 @@ import { Entity } from "./Entity.ts";
 import { Light } from "./Light.ts";
 import { Mesh } from "./Mesh.ts";
 import { MeshAtlas } from "./MeshAtlas.ts";
+import { NoiseTexture } from "./NoiseTexture.ts";
 import { Player } from "./Player.ts";
 import type { Renderable } from "./Renderable.ts";
 import { Shader } from "./Shader.ts";
@@ -26,6 +27,8 @@ export class Game {
 	private shader: Shader | null = null;
 	private depthShader: Shader | null = null;
 	private camera: Camera | null = null;
+	private noiseTexture: NoiseTexture | null = null;
+	private cloudOffset: number = 0;
 	private entities: Renderable[] = [];
 	private lights: Light[] = [];
 	private player: Player | null = null;
@@ -58,9 +61,9 @@ export class Game {
 			// Handle rotation on key press (not continuous)
 			if (!wasPressed && this.camera) {
 				if (key === "q") {
-					this.camera.rotateTo(this.camera.getAngle() - Math.PI / 2);
+					this.camera.rotateTo(this.camera.getTargetAngle() - Math.PI / 2);
 				} else if (key === "e") {
-					this.camera.rotateTo(this.camera.getAngle() + Math.PI / 2);
+					this.camera.rotateTo(this.camera.getTargetAngle() + Math.PI / 2);
 				}
 			}
 		});
@@ -135,6 +138,12 @@ export class Game {
 			depthVertexShaderSource,
 			depthFragmentShaderSource,
 		);
+
+		// Generate cloud noise texture (512x512)
+		this.noiseTexture = new NoiseTexture(gl, 512);
+
+		// Random starting offset for clouds to avoid always seeing the same pattern
+		this.cloudOffset = Math.random() * 10000;
 
 		// Create camera (isometric-style view)
 		this.camera = new Camera(gl, this.shader);
@@ -267,8 +276,22 @@ export class Game {
 			this.player.update(deltaTime);
 		}
 
-		// Draw the scene
-		this.camera.draw(this.entities, this.lights);
+		// Update lights to follow player
+		if (this.player && this.lights.length > 0) {
+			const playerPos = this.player.getPosition();
+			// Keep the same relative offset (rotated 30 degrees around Y axis)
+			this.lights[0].followTarget(playerPos, 2.93, 12, 10.93);
+		}
+
+		// Draw the scene (pass time and noise texture for cloud shadows)
+		if (this.noiseTexture) {
+			this.camera.draw(
+				this.entities,
+				this.lights,
+				timestamp / 1000 + this.cloudOffset,
+				this.noiseTexture.texture,
+			);
+		}
 	}
 }
 

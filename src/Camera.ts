@@ -65,10 +65,17 @@ export class Camera {
 	}
 
 	/**
-	 * Get the current camera angle (for input processing)
+	 * Get the current camera angle (actual, animating angle)
 	 */
 	getAngle(): number {
 		return this.angle;
+	}
+
+	/**
+	 * Get the target camera angle (where it's rotating to)
+	 */
+	getTargetAngle(): number {
+		return this.targetAngle;
 	}
 
 	/**
@@ -125,6 +132,22 @@ export class Camera {
 		);
 	}
 
+	/**
+	 * Simple frustum culling - check if entity is within visible range
+	 * Uses distance from camera target in XZ plane (top-down view)
+	 */
+	isInFrustum(entityPosition: vec3): boolean {
+		// Calculate distance in XZ plane from camera target
+		const dx = entityPosition[0] - this.target[0];
+		const dz = entityPosition[2] - this.target[2];
+		const distanceXZ = Math.sqrt(dx * dx + dz * dz);
+
+		// Conservative culling radius (visible area + margin for large objects)
+		const cullRadius = 25; // Adjust based on your scene scale
+
+		return distanceXZ < cullRadius;
+	}
+
 	updateMatrices(aspectRatio: number) {
 		mat4.perspective(
 			this.projectionMatrix,
@@ -137,7 +160,12 @@ export class Camera {
 		mat4.lookAt(this.viewMatrix, this.position, this.target, this.up);
 	}
 
-	draw(entities: Renderable[], lights: Light[] = []) {
+	draw(
+		entities: Renderable[],
+		lights: Light[] = [],
+		time: number = 0,
+		noiseTexture: WebGLTexture | null = null,
+	) {
 		const gl = this.gl;
 		const aspectRatio = gl.canvas.width / gl.canvas.height;
 
@@ -156,6 +184,14 @@ export class Camera {
 		// Set camera uniforms
 		this.shader.setUniformMatrix4fv("u_view", this.viewMatrix);
 		this.shader.setUniformMatrix4fv("u_projection", this.projectionMatrix);
+		this.shader.setUniform1f("u_time", time);
+
+		// Bind noise texture for cloud shadows (use texture slot 5)
+		if (noiseTexture) {
+			gl.activeTexture(gl.TEXTURE5);
+			gl.bindTexture(gl.TEXTURE_2D, noiseTexture);
+			this.shader.setUniform1i("u_noiseTexture", 5);
+		}
 
 		// Set light uniforms
 		this.shader.setUniform1i("u_numLights", lights.length);
@@ -188,6 +224,9 @@ export class Camera {
 		for (const entity of entities) {
 			// Skip entities without a mesh
 			if (!entity.mesh) continue;
+
+			// Frustum culling - skip entities outside visible area
+			if (!this.isInFrustum(entity.position)) continue;
 
 			const modelMatrix = entity.getModelMatrix();
 			this.shader.setUniformMatrix4fv("u_model", modelMatrix);

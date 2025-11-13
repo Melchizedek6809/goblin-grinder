@@ -3,7 +3,7 @@ import type { mat4, vec3 } from "gl-matrix";
 export class Shader {
 	public program: WebGLProgram;
 	private gl: WebGL2RenderingContext;
-	private uniformLocations: Map<string, WebGLUniformLocation> = new Map();
+	private uniformLocations: Map<string, WebGLUniformLocation | null> = new Map();
 	private attributeLocations: Map<string, number> = new Map();
 
 	constructor(
@@ -68,20 +68,19 @@ export class Shader {
 		this.gl.useProgram(this.program);
 	}
 
-	getUniformLocation(name: string): WebGLUniformLocation {
+	getUniformLocation(name: string): WebGLUniformLocation | null {
 		if (!this.uniformLocations.has(name)) {
 			const location = this.gl.getUniformLocation(this.program, name);
 			if (location === null) {
-				throw new Error(`Uniform ${name} not found in shader`);
+				// Store null to avoid repeated lookups
+				this.uniformLocations.set(name, location);
+				return null;
 			}
 			this.uniformLocations.set(name, location);
 			return location;
 		}
 		const location = this.uniformLocations.get(name);
-		if (!location) {
-			throw new Error(`Uniform ${name} not found in cache`);
-		}
-		return location;
+		return location || null;
 	}
 
 	getAttributeLocation(name: string): number {
@@ -101,23 +100,33 @@ export class Shader {
 	}
 
 	setUniformMatrix4fv(name: string, value: mat4): void {
-		this.gl.uniformMatrix4fv(
-			this.getUniformLocation(name),
-			false,
-			value as Float32Array,
-		);
+		const location = this.getUniformLocation(name);
+		if (location === null) return;
+		this.gl.uniformMatrix4fv(location, false, value as Float32Array);
 	}
 
 	setUniform3fv(name: string, value: vec3 | number[]): void {
-		this.gl.uniform3fv(this.getUniformLocation(name), value as Float32Array);
+		const location = this.getUniformLocation(name);
+		if (location === null) return;
+		this.gl.uniform3fv(location, value as Float32Array);
 	}
 
 	setUniform1f(name: string, value: number): void {
-		this.gl.uniform1f(this.getUniformLocation(name), value);
+		const location = this.getUniformLocation(name);
+		if (location === null) return;
+		this.gl.uniform1f(location, value);
+	}
+
+	setUniform2f(name: string, x: number, y: number): void {
+		const location = this.getUniformLocation(name);
+		if (location === null) return;
+		this.gl.uniform2f(location, x, y);
 	}
 
 	setUniform1i(name: string, value: number): void {
-		this.gl.uniform1i(this.getUniformLocation(name), value);
+		const location = this.getUniformLocation(name);
+		if (location === null) return;
+		this.gl.uniform1i(location, value);
 	}
 
 	setUniformMatrix4fvArray(name: string, values: mat4[]): void {

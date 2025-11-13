@@ -14,8 +14,22 @@ uniform int u_numLights;
 
 uniform sampler2D u_texture;
 uniform bool u_useTexture;
+uniform float u_time;
+uniform sampler2D u_noiseTexture;
 
 out vec4 fragColor;
+
+// Sample cloud shadows from pre-computed noise texture
+float cloudShadow(vec2 worldPos, float time) {
+    // Animate cloud movement by scrolling UV coordinates (massive, very slow-moving clouds)
+    vec2 cloudCoord = worldPos * 0.00125 + vec2(time * 0.001, time * 0.00075);
+
+    // Single sample for performance
+    float cloudPattern = texture(u_noiseTexture, cloudCoord).r;
+
+    // Map to shadow intensity with sharper threshold for more clustered clouds
+    return smoothstep(0.42, 0.58, cloudPattern);
+}
 
 float calculateShadow(vec4 lightSpacePos, int lightIndex) {
     // Perspective divide
@@ -30,18 +44,31 @@ float calculateShadow(vec4 lightSpacePos, int lightIndex) {
         return 0.0;
     }
 
-    // Get depth from shadow map - must use constant index
-    float closestDepth = 0.0;
-    if (lightIndex == 0) closestDepth = texture(u_shadowMaps[0], projCoords.xy).r;
-    else if (lightIndex == 1) closestDepth = texture(u_shadowMaps[1], projCoords.xy).r;
-    else if (lightIndex == 2) closestDepth = texture(u_shadowMaps[2], projCoords.xy).r;
-    else if (lightIndex == 3) closestDepth = texture(u_shadowMaps[3], projCoords.xy).r;
-
     float currentDepth = projCoords.z;
-
-    // Shadow bias to prevent shadow acne
     float bias = 0.005;
-    float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
+
+    // PCF (Percentage Closer Filtering) for smooth shadow edges
+    float shadow = 0.0;
+    vec2 texelSize = vec2(1.0) / vec2(1024.0); // Shadow map resolution
+
+    // 3x3 PCF kernel
+    for(int x = -1; x <= 1; x++) {
+        for(int y = -1; y <= 1; y++) {
+            vec2 offset = vec2(float(x), float(y)) * texelSize;
+            float closestDepth = 0.0;
+
+            // Sample shadow map - must use constant index
+            if (lightIndex == 0) closestDepth = texture(u_shadowMaps[0], projCoords.xy + offset).r;
+            else if (lightIndex == 1) closestDepth = texture(u_shadowMaps[1], projCoords.xy + offset).r;
+            else if (lightIndex == 2) closestDepth = texture(u_shadowMaps[2], projCoords.xy + offset).r;
+            else if (lightIndex == 3) closestDepth = texture(u_shadowMaps[3], projCoords.xy + offset).r;
+
+            shadow += currentDepth - bias > closestDepth ? 1.0 : 0.0;
+        }
+    }
+
+    // Average the 9 samples
+    shadow /= 9.0;
 
     return shadow;
 }
@@ -51,6 +78,9 @@ void main() {
 
     // Get base color from texture or vertex color
     vec3 color = u_useTexture ? texture(u_texture, v_uv).rgb : v_color;
+
+    // Calculate cloud shadow
+    float cloudShade = cloudShadow(v_worldPosition.xz, u_time);
 
     float ambient = 0.2;
     vec3 finalColor = color * ambient;
@@ -83,6 +113,9 @@ void main() {
         float shadow = calculateShadow(v_lightSpacePositions[3], 3);
         finalColor += color * u_lightColors[3] * diffuse * (1.0 - shadow * 0.8);
     }
+
+    // Apply cloud shadows (darken areas under clouds)
+    finalColor *= mix(0.5, 1.0, cloudShade);
 
     fragColor = vec4(finalColor, 1.0);
 }
