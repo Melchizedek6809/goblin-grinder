@@ -1,5 +1,6 @@
 import { vec3 } from "gl-matrix";
 import { Camera } from "./Camera.ts";
+import { DebugRenderer } from "./DebugRenderer.ts";
 import { Entity } from "./Entity.ts";
 import { Light } from "./Light.ts";
 import { Mesh } from "./Mesh.ts";
@@ -12,6 +13,10 @@ import { StaticBush } from "./StaticBush.ts";
 import type { StaticObject } from "./StaticObject.ts";
 import { StaticRock } from "./StaticRock.ts";
 import { StaticTree } from "./StaticTree.ts";
+import { KeyboardInput } from "./input/KeyboardInput.ts";
+import type { InputSource } from "./input/InputSource.ts";
+import { createSphereCollider } from "./physics/Collider.ts";
+import { Physics } from "./physics/Physics.ts";
 import fragmentShaderSource from "./shaders/basic.frag?raw";
 import vertexShaderSource from "./shaders/basic.vert?raw";
 import depthFragmentShaderSource from "./shaders/depth.frag?raw";
@@ -33,7 +38,10 @@ export class Game {
 	private lights: Light[] = [];
 	private player: Player | null = null;
 
-	private pressedKeys: Set<string> = new Set();
+	private inputSource: InputSource;
+	private physics: Physics = new Physics();
+	private debugRenderer: DebugRenderer | null = null;
+	private debugMode: boolean = false;
 	private lastFrameTime: number = 0;
 
 	constructor(rootElement: HTMLElement) {
@@ -45,31 +53,19 @@ export class Game {
 		window.addEventListener("resize", this.resize.bind(this));
 		this.resize();
 
-		this.setupInput();
-		this.initContext();
-		this.initScene().then(() => {
-			this.draw();
-		});
-	}
-
-	private setupInput() {
+		// Setup debug mode toggle (F3)
 		window.addEventListener("keydown", (e) => {
-			const key = e.key.toLowerCase();
-			const wasPressed = this.pressedKeys.has(key);
-			this.pressedKeys.add(key);
-
-			// Handle rotation on key press (not continuous)
-			if (!wasPressed && this.camera) {
-				if (key === "q") {
-					this.camera.rotateTo(this.camera.getTargetAngle() - Math.PI / 2);
-				} else if (key === "e") {
-					this.camera.rotateTo(this.camera.getTargetAngle() + Math.PI / 2);
-				}
+			if (e.key === "F3") {
+				e.preventDefault();
+				this.debugMode = !this.debugMode;
+				console.log(`Debug mode: ${this.debugMode ? "ON" : "OFF"}`);
 			}
 		});
 
-		window.addEventListener("keyup", (e) => {
-			this.pressedKeys.delete(e.key.toLowerCase());
+		this.inputSource = new KeyboardInput();
+		this.initContext();
+		this.initScene().then(() => {
+			this.draw();
 		});
 	}
 
@@ -96,6 +92,7 @@ export class Game {
 			maxDistance: number;
 			minScale: number;
 			maxScale: number;
+			colliderRadius?: number; // Optional collider
 		},
 	): void {
 		for (let i = 0; i < count; i++) {
@@ -115,6 +112,18 @@ export class Game {
 			const scale =
 				config.minScale + Math.random() * (config.maxScale - config.minScale);
 			obj.setUniformScale(scale);
+
+			// Add collider if specified (layer 2 = environment, collide with all)
+			if (config.colliderRadius !== undefined) {
+				const collider = createSphereCollider(
+					obj.position,
+					config.colliderRadius * scale, // Scale collider with object
+					2, // layer 2 = environment
+					0xffffffff, // collide with all layers
+				);
+				obj.collider = collider;
+				this.physics.addCollider(collider);
+			}
 
 			this.entities.push(obj);
 		}
@@ -138,6 +147,9 @@ export class Game {
 			depthVertexShaderSource,
 			depthFragmentShaderSource,
 		);
+
+		// Create debug renderer
+		this.debugRenderer = new DebugRenderer(gl);
 
 		// Generate cloud noise texture (512x512)
 		this.noiseTexture = new NoiseTexture(gl, 512);
@@ -176,6 +188,18 @@ export class Game {
 		this.player = new Player(atlas.mage);
 		this.entities.push(...this.player.entities);
 
+		// Add collider to player (layer 0 = player, collide with everything except player layer)
+		if (this.player.entities.length > 0) {
+			const playerCollider = createSphereCollider(
+				this.player.position,
+				0.4, // radius
+				0, // layer 0 = player
+				0xfffffffe, // collide with all layers except 0
+			);
+			this.player.entities[0].collider = playerCollider;
+			this.physics.addCollider(playerCollider);
+		}
+
 		// Spawn static objects
 		this.spawnStaticObjects(() => new StaticTree(atlas.getRandomTree()), 30, {
 			yOffset: -0.6,
@@ -183,6 +207,7 @@ export class Game {
 			maxDistance: 35,
 			minScale: 0.8,
 			maxScale: 1.2,
+			colliderRadius: 0.5, // Trees have collision
 		});
 
 		this.spawnStaticObjects(() => new StaticRock(atlas.getRandomRock()), 20, {
@@ -191,6 +216,7 @@ export class Game {
 			maxDistance: 33,
 			minScale: 0.6,
 			maxScale: 1.4,
+			colliderRadius: 0.6, // Rocks have collision
 		});
 
 		this.spawnStaticObjects(() => new StaticBush(atlas.getRandomBush()), 25, {
@@ -199,49 +225,26 @@ export class Game {
 			maxDistance: 33,
 			minScale: 0.7,
 			maxScale: 1.3,
+			// No collider - bushes are passable
 		});
 	}
 
 	private updateCamera(deltaTime: number) {
 		if (!this.camera || !this.player) return;
 
-		// Get current camera angle for input processing
-		const cameraAngle = this.camera.getAngle();
+		// Poll input state
+		const input = this.inputSource.poll(this.camera.getAngle());
 
-		// Calculate movement direction based on camera angle (fixed directions)
-		let moveX = 0;
-		let moveZ = 0;
-
-		if (this.pressedKeys.has("s")) {
-			// Move away from camera (up on screen)
-			moveX += Math.cos(cameraAngle);
-			moveZ += Math.sin(cameraAngle);
+		// Handle camera rotation commands
+		if (input.rotateLeft) {
+			this.camera.rotateTo(this.camera.getTargetAngle() - Math.PI / 2);
 		}
-		if (this.pressedKeys.has("w")) {
-			// Move towards camera (down on screen)
-			moveX += Math.cos(cameraAngle + Math.PI);
-			moveZ += Math.sin(cameraAngle + Math.PI);
-		}
-		if (this.pressedKeys.has("a")) {
-			// Move left on screen
-			moveX += Math.cos(cameraAngle + Math.PI / 2);
-			moveZ += Math.sin(cameraAngle + Math.PI / 2);
-		}
-		if (this.pressedKeys.has("d")) {
-			// Move right on screen
-			moveX += Math.cos(cameraAngle - Math.PI / 2);
-			moveZ += Math.sin(cameraAngle - Math.PI / 2);
+		if (input.rotateRight) {
+			this.camera.rotateTo(this.camera.getTargetAngle() + Math.PI / 2);
 		}
 
-		// Normalize movement
-		const moveLength = Math.sqrt(moveX * moveX + moveZ * moveZ);
-		if (moveLength > 0) {
-			moveX = moveX / moveLength;
-			moveZ = moveZ / moveLength;
-		}
-
-		// Move player
-		this.player.move(moveX, moveZ, deltaTime);
+		// Move player (with physics collision)
+		this.player.move(input.moveX, input.moveZ, deltaTime, this.physics);
 
 		// Update camera to follow player
 		this.camera.setFollowTarget(this.player.getPosition());
@@ -291,6 +294,11 @@ export class Game {
 				timestamp / 1000 + this.cloudOffset,
 				this.noiseTexture.texture,
 			);
+		}
+
+		// Draw debug visualization if enabled
+		if (this.debugMode && this.debugRenderer && this.camera) {
+			this.debugRenderer.renderColliders(this.physics, this.camera);
 		}
 	}
 }

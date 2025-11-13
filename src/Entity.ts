@@ -1,5 +1,6 @@
 import { mat4, quat, vec3 } from "gl-matrix";
 import type { Mesh } from "./Mesh.ts";
+import type { Collider } from "./physics/Collider.ts";
 import type { Renderable } from "./Renderable.ts";
 
 export class Entity implements Renderable {
@@ -7,6 +8,7 @@ export class Entity implements Renderable {
 	public rotation: quat;
 	public scale: vec3;
 	public mesh: Mesh;
+	public collider?: Collider;
 
 	private modelMatrix: mat4;
 
