@@ -1,6 +1,7 @@
 import { quat, vec3 } from "gl-matrix";
 import { Entity } from "./Entity.ts";
 import type { Mesh } from "./Mesh.ts";
+import type { Player } from "./Player.ts";
 import type { SphereCollider } from "./physics/Collider.ts";
 import type { Physics } from "./physics/Physics.ts";
 
@@ -26,6 +27,9 @@ export class Enemy {
 	public chaseEndRange: number = 10.0; // Stop chasing when player is this far (higher to avoid flickering)
 	public attackRange: number = 1.5; // Attack when player is this close
 	public attackDuration: number = 3; // Number of fixed update ticks to attack for
+
+	// Combat
+	public attackDamage: number = 10; // Damage dealt to player per attack
 
 	constructor(meshes: Mesh[]) {
 		this.position = vec3.fromValues(0, -0.5, 0);
@@ -66,9 +70,11 @@ export class Enemy {
 
 	/**
 	 * Update AI logic (called at fixed timestep, e.g., 30fps)
-	 * State machine that controls enemy behavior based on player position
+	 * State machine that controls enemy behavior based on player
 	 */
-	update(playerPosition: vec3): void {
+	update(player: Player): void {
+		const playerPosition = player.getPosition();
+
 		// Calculate distance and direction to player
 		const toPlayer = vec3.create();
 		vec3.subtract(toPlayer, playerPosition, this.position);
@@ -128,6 +134,10 @@ export class Enemy {
 
 				// Transition: attack -> chase (attack duration finished)
 				if (this.attackTimer <= 0) {
+					// Check if player is still in range and deal damage
+					if (distanceToPlayer < this.attackRange) {
+						player.takeDamage(this.attackDamage);
+					}
 					this.state = "chase";
 				}
 				break;

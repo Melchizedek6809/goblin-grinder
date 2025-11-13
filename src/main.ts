@@ -23,6 +23,12 @@ import vertexShaderSource from "./shaders/basic.vert?raw";
 import depthFragmentShaderSource from "./shaders/depth.frag?raw";
 import depthVertexShaderSource from "./shaders/depth.vert?raw";
 
+// Import UI components
+import type { HealthDisplay } from "./components/health-display.ts";
+import type { FpsDisplay } from "./components/fps-display.ts";
+import "./components/health-display.ts";
+import "./components/fps-display.ts";
+
 export class Game {
 	public readonly rootElement: HTMLElement;
 	public readonly canvasElement: HTMLCanvasElement;
@@ -50,11 +56,28 @@ export class Game {
 	private readonly fixedTimestep: number = 1 / 30; // 30 updates per second
 	private accumulator: number = 0;
 
+	// UI elements
+	private healthDisplay: HealthDisplay | null = null;
+	private fpsDisplay: FpsDisplay | null = null;
+
+	// FPS tracking
+	private fpsFrameTimes: number[] = [];
+	private fpsUpdateCounter: number = 0;
+
 	constructor(rootElement: HTMLElement) {
 		this.rootElement = rootElement;
 		const canvas = document.createElement("canvas");
 		this.canvasElement = canvas;
 		rootElement.append(canvas);
+
+		// Get UI elements after custom elements are defined
+		Promise.all([
+			customElements.whenDefined("health-display"),
+			customElements.whenDefined("fps-display"),
+		]).then(() => {
+			this.healthDisplay = document.querySelector("health-display");
+			this.fpsDisplay = document.querySelector("fps-display");
+		});
 
 		window.addEventListener("resize", this.resize.bind(this));
 		this.resize();
@@ -198,7 +221,7 @@ export class Game {
 		if (this.player.entities.length > 0) {
 			const playerCollider = createSphereCollider(
 				this.player.position,
-				0.4, // radius
+				0.35, // radius
 				0, // layer 0 = player
 				0xfffffffe, // collide with all layers except 0
 			);
@@ -217,7 +240,7 @@ export class Game {
 		if (enemy1.entities.length > 0) {
 			const enemy1Collider = createSphereCollider(
 				enemy1.position,
-				0.4, // radius
+				0.35, // radius
 				1, // layer 1 = enemy
 				0xffffffff, // collide with all layers (including other enemies)
 			);
@@ -235,7 +258,7 @@ export class Game {
 		if (enemy2.entities.length > 0) {
 			const enemy2Collider = createSphereCollider(
 				enemy2.position,
-				0.4, // radius
+				0.35, // radius
 				1, // layer 1 = enemy
 				0xffffffff, // collide with all layers (including other enemies)
 			);
@@ -350,6 +373,39 @@ export class Game {
 		if (this.debugMode && this.debugRenderer && this.camera) {
 			this.debugRenderer.renderColliders(this.physics, this.camera);
 		}
+
+		// Update UI
+		this.updateUI(deltaTime);
+	}
+
+	/**
+	 * Update UI elements (health, FPS, etc.)
+	 */
+	private updateUI(deltaTime: number) {
+		// Update health display
+		if (this.healthDisplay && this.player) {
+			this.healthDisplay.health = this.player.health;
+			this.healthDisplay.maxHealth = this.player.maxHealth;
+		}
+
+		// Calculate FPS (rolling average over last 60 frames)
+		if (deltaTime > 0) {
+			this.fpsFrameTimes.push(1 / deltaTime);
+			if (this.fpsFrameTimes.length > 60) {
+				this.fpsFrameTimes.shift();
+			}
+		}
+
+		// Update FPS display (only every 10 frames to reduce jitter)
+		this.fpsUpdateCounter++;
+		if (this.fpsUpdateCounter >= 10 && this.fpsDisplay) {
+			const avgFps =
+				this.fpsFrameTimes.reduce((a, b) => a + b, 0) /
+				this.fpsFrameTimes.length;
+			this.fpsDisplay.fps = avgFps;
+			this.fpsDisplay.visible = this.debugMode;
+			this.fpsUpdateCounter = 0;
+		}
 	}
 
 	/**
@@ -362,9 +418,8 @@ export class Game {
 		this.player.update(this.fixedTimestep);
 
 		// Update enemy AI
-		const playerPos = this.player.getPosition();
 		for (const enemy of this.enemies) {
-			enemy.update(playerPos);
+			enemy.update(this.player);
 		}
 	}
 

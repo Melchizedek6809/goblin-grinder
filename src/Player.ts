@@ -16,6 +16,10 @@ export class Player {
 	public deceleration: number = 30.0; // How fast we slow down when not moving (units/s²)
 	public speedMultiplier: number = 1.0; // Multiply speed for gameplay effects (buffs/debuffs)
 
+	// Health
+	public health: number = 100;
+	public maxHealth: number = 100;
+
 	constructor(meshes: Mesh[]) {
 		this.position = vec3.fromValues(0, -0.5, 0);
 		this.velocity = vec3.create();
@@ -148,5 +152,13 @@ export class Player {
 
 	getPosition(): vec3 {
 		return this.position;
+	}
+
+	/**
+	 * Damage the player by the specified amount
+	 */
+	takeDamage(amount: number): void {
+		this.health = Math.max(0, this.health - amount);
+		console.log(`Player took ${amount} damage. Health: ${this.health}/${this.maxHealth}`);
 	}
 }
