@@ -5,7 +5,7 @@ import type { Player } from "./Player.ts";
 import type { SphereCollider } from "./physics/Collider.ts";
 import type { Physics } from "./physics/Physics.ts";
 
-export type EnemyState = "idle" | "chase" | "attack";
+export type EnemyState = "idle" | "chase" | "attack" | "death";
 
 export class Enemy {
 	public entities: Entity[];
@@ -17,6 +17,13 @@ export class Enemy {
 	// AI state machine
 	public state: EnemyState = "idle";
 	private attackTimer: number = 0; // Counts fixed update ticks during attack
+
+	// Health system
+	public health: number = 50;
+	public maxHealth: number = 50;
+	private deathTimer: number = 0; // Time spent in death state (seconds)
+	private deathDuration: number = 2.0; // How long to stay in death state before despawn
+	private sinkSpeed: number = 0.5; // How fast to sink into ground (units/second)
 
 	// Movement parameters
 	public moveSpeed: number = 1.5; // Base movement speed (slower than player's 3.0)
@@ -69,10 +76,39 @@ export class Enemy {
 	}
 
 	/**
+	 * Deal damage to this enemy
+	 * @param amount Amount of damage to deal
+	 */
+	takeDamage(amount: number): void {
+		if (this.state === "death") return; // Already dead
+
+		this.health -= amount;
+		console.log(`Enemy took ${amount} damage, health: ${this.health}/${this.maxHealth}`);
+
+		if (this.health <= 0) {
+			this.health = 0;
+			this.state = "death";
+			this.deathTimer = 0;
+			vec3.set(this.goalVelocity, 0, 0, 0);
+			vec3.set(this.velocity, 0, 0, 0);
+			console.log("Enemy died!");
+		}
+	}
+
+	/**
+	 * Check if enemy should be removed from the game
+	 */
+	shouldDespawn(): boolean {
+		return this.state === "death" && this.deathTimer >= this.deathDuration;
+	}
+
+	/**
 	 * Update AI logic (called at fixed timestep, e.g., 30fps)
 	 * State machine that controls enemy behavior based on player
 	 */
 	update(player: Player): void {
+		// Skip AI logic if dead
+		if (this.state === "death") return;
 		const playerPosition = player.getPosition();
 
 		// Calculate distance and direction to player
@@ -149,6 +185,18 @@ export class Enemy {
 	 * This creates smooth movement between fixed updates
 	 */
 	applyMovement(deltaTime: number, physics?: Physics): void {
+		// Handle death state
+		if (this.state === "death") {
+			this.deathTimer += deltaTime;
+
+			// Sink into the ground
+			this.position[1] -= this.sinkSpeed * deltaTime;
+
+			// Update entity transforms
+			this.updateEntities();
+			return;
+		}
+
 		// Interpolate current velocity towards goal velocity
 		const velDiffX = this.goalVelocity[0] - this.velocity[0];
 		const velDiffZ = this.goalVelocity[2] - this.velocity[2];

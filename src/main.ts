@@ -22,6 +22,12 @@ import fragmentShaderSource from "./shaders/basic.frag?raw";
 import vertexShaderSource from "./shaders/basic.vert?raw";
 import depthFragmentShaderSource from "./shaders/depth.frag?raw";
 import depthVertexShaderSource from "./shaders/depth.vert?raw";
+import particleVertexShaderSource from "./shaders/particle.vert?raw";
+import particleFragmentShaderSource from "./shaders/particle.frag?raw";
+import { ParticleSystem } from "./ParticleSystem.ts";
+import type { Projectile } from "./Projectile.ts";
+import type { Explosion } from "./Explosion.ts";
+import { FireballWeapon } from "./weapons/FireballWeapon.ts";
 
 // Import UI components
 import type { HealthDisplay } from "./components/health-display.ts";
@@ -52,6 +58,7 @@ export class Game {
 
 	private shader: Shader | null = null;
 	private depthShader: Shader | null = null;
+	private particleShader: Shader | null = null;
 	private camera: Camera | null = null;
 	private noiseTexture: NoiseTexture | null = null;
 	private cloudOffset: number = 0;
@@ -59,6 +66,9 @@ export class Game {
 	private lights: Light[] = [];
 	private player: Player | null = null;
 	private enemies: Enemy[] = [];
+	private particleSystem: ParticleSystem | null = null;
+	private projectiles: Projectile[] = [];
+	private explosions: Explosion[] = [];
 
 	private inputSource: InputSource;
 	private physics: Physics = new Physics();
@@ -69,6 +79,11 @@ export class Game {
 	// Fixed timestep for game logic updates
 	private readonly fixedTimestep: number = 1 / 30; // 30 updates per second
 	private accumulator: number = 0;
+
+	// Enemy spawning
+	private enemySpawnTimer: number = 0;
+	private enemySpawnInterval: number = 3.0; // Spawn every 3 seconds
+	private maxEnemies: number = 10;
 
 	// UI elements
 	private healthDisplay: HealthDisplay | null = null;
@@ -155,6 +170,51 @@ export class Game {
 	}
 
 	/**
+	 * Spawn a single enemy at the specified position
+	 */
+	private spawnEnemy(atlas: MeshAtlas, x: number, y: number, z: number): void {
+		const enemy = new Enemy(atlas.skeleton);
+		enemy.setPosition(x, y, z);
+
+		// Face toward player
+		if (this.player) {
+			const playerPos = this.player.getPosition();
+			const dx = playerPos[0] - x;
+			const dz = playerPos[2] - z;
+			enemy.setRotation(Math.atan2(dx, dz));
+		}
+
+		this.entities.push(...enemy.entities);
+		this.enemies.push(enemy);
+
+		// Add collider (layer 1 = enemy, collide with everything including other enemies)
+		if (enemy.entities.length > 0) {
+			const collider = createSphereCollider(
+				enemy.position,
+				0.35, // radius
+				1, // layer 1 = enemy
+				0xffffffff, // collide with all layers
+			);
+			enemy.entities[0].collider = collider;
+			this.physics.addCollider(collider);
+		}
+	}
+
+	/**
+	 * Spawn a group of enemies around a central point
+	 */
+	private spawnEnemyGroup(atlas: MeshAtlas, centerX: number, centerZ: number, count: number): void {
+		for (let i = 0; i < count; i++) {
+			// Spread enemies in a small circle
+			const angle = (Math.PI * 2 * i) / count;
+			const radius = 1.0 + Math.random() * 1.0; // 1-2 units apart
+			const x = centerX + Math.cos(angle) * radius;
+			const z = centerZ + Math.sin(angle) * radius;
+			this.spawnEnemy(atlas, x, -0.5, z);
+		}
+	}
+
+	/**
 	 * Helper to spawn multiple static objects with randomized placement
 	 */
 	private spawnStaticObjects<T extends StaticObject>(
@@ -217,8 +277,11 @@ export class Game {
 		this.entities = [];
 		this.lights = [];
 		this.enemies = [];
+		this.projectiles = [];
+		this.explosions = [];
 		this.physics = new Physics();
 		this.score = 0;
+		this.enemySpawnTimer = 0;
 
 		// Reset camera and shader state (only if not already initialized)
 		if (!this.shader) {
@@ -233,6 +296,11 @@ export class Game {
 				depthVertexShaderSource,
 				depthFragmentShaderSource,
 			);
+			this.particleShader = new Shader(
+				gl,
+				particleVertexShaderSource,
+				particleFragmentShaderSource,
+			);
 
 			// Create debug renderer
 			this.debugRenderer = new DebugRenderer(gl);
@@ -243,6 +311,12 @@ export class Game {
 			// Random starting offset for clouds to avoid always seeing the same pattern
 			this.cloudOffset = Math.random() * 10000;
 		}
+
+		// Create or reset particle system
+		if (!this.particleShader) {
+			throw new Error("Particle shader not initialized");
+		}
+		this.particleSystem = new ParticleSystem(gl, this.particleShader, 2000);
 
 		// Create camera (isometric-style view) - shader is guaranteed to exist here
 		if (!this.shader) {
@@ -299,42 +373,12 @@ export class Game {
 			this.physics.addCollider(playerCollider);
 		}
 
-		// Create enemies (skeletons)
-		const enemy1 = new Enemy(atlas.skeleton);
-		enemy1.setPosition(3, -0.5, 2);
-		enemy1.setRotation(Math.PI / 4); // Face toward player area
-		this.entities.push(...enemy1.entities);
-		this.enemies.push(enemy1);
+		// Give player weapons
+		this.player.weapons.push(new FireballWeapon());
 
-		// Add collider to enemy1 (layer 1 = enemy, collide with everything including other enemies)
-		if (enemy1.entities.length > 0) {
-			const enemy1Collider = createSphereCollider(
-				enemy1.position,
-				0.35, // radius
-				1, // layer 1 = enemy
-				0xffffffff, // collide with all layers (including other enemies)
-			);
-			enemy1.entities[0].collider = enemy1Collider;
-			this.physics.addCollider(enemy1Collider);
-		}
-
-		const enemy2 = new Enemy(atlas.skeleton);
-		enemy2.setPosition(-4, -0.5, -3);
-		enemy2.setRotation(-Math.PI / 3); // Face toward player area
-		this.entities.push(...enemy2.entities);
-		this.enemies.push(enemy2);
-
-		// Add collider to enemy2 (layer 1 = enemy, collide with everything including other enemies)
-		if (enemy2.entities.length > 0) {
-			const enemy2Collider = createSphereCollider(
-				enemy2.position,
-				0.35, // radius
-				1, // layer 1 = enemy
-				0xffffffff, // collide with all layers (including other enemies)
-			);
-			enemy2.entities[0].collider = enemy2Collider;
-			this.physics.addCollider(enemy2Collider);
-		}
+		// Spawn initial enemies
+		this.spawnEnemy(atlas, 5, -0.5, 5);
+		this.spawnEnemy(atlas, -5, -0.5, -5);
 
 		// Spawn static objects
 		this.spawnStaticObjects(() => new StaticTree(atlas.getRandomTree()), 30, {
@@ -496,6 +540,23 @@ export class Game {
 			);
 		}
 
+		// Draw particles (with alpha blending)
+		if (this.particleSystem && this.camera) {
+			// Enable blending for particles
+			gl.enable(gl.BLEND);
+			gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+			gl.depthMask(false); // Don't write to depth buffer
+
+			this.particleSystem.render(
+				this.camera.getViewMatrix(),
+				this.camera.getProjectionMatrix(),
+			);
+
+			// Restore state
+			gl.depthMask(true);
+			gl.disable(gl.BLEND);
+		}
+
 		// Draw debug visualization if enabled
 		if (this.debugMode && this.debugRenderer && this.camera) {
 			this.debugRenderer.renderColliders(this.physics, this.camera);
@@ -555,6 +616,98 @@ export class Game {
 		// Update player logic (only during gameplay)
 		if (this.gameState === GameState.PLAYING) {
 			this.player.update(this.fixedTimestep);
+
+			// Update weapons
+			if (this.particleSystem) {
+				for (const weapon of this.player.weapons) {
+					weapon.update(
+						this.player,
+						this.enemies,
+						(projectile) => {
+							this.projectiles.push(projectile);
+						},
+						this.particleSystem,
+						(explosion) => {
+							this.explosions.push(explosion);
+						},
+					);
+				}
+			}
+
+			// Update projectiles
+			for (const projectile of this.projectiles) {
+				projectile.update(this.fixedTimestep);
+
+				// Check collision with static objects (trees, rocks)
+				const hitObstacle = this.physics.overlapSphere(
+					projectile.position,
+					0.3, // projectile collision radius
+					3, // projectile layer
+					0x00000004, // only collide with layer 2 (environment)
+				);
+
+				if (hitObstacle) {
+					const shouldDestroy = projectile.onHitObstacle();
+					if (shouldDestroy) {
+						projectile.destroy();
+						continue; // Skip enemy check if destroyed
+					}
+				}
+
+				// Check collision with enemies
+				for (const enemy of this.enemies) {
+					if (enemy.getState() === "death") continue; // Skip dead enemies
+
+					const dist = vec3.distance(projectile.position, enemy.getPosition());
+					// Collision radius: enemy collider (0.35) + projectile size (~0.5) = ~0.85, using 1.0 for safety
+					if (dist < 1.0) {
+						console.log(`Projectile hit enemy at distance ${dist.toFixed(2)}`);
+						// Hit! Let projectile handle it (returns true if should be destroyed)
+						const shouldDestroy = projectile.onHit(enemy);
+						if (shouldDestroy) {
+							projectile.destroy();
+						}
+						break; // Only hit one enemy
+					}
+				}
+			}
+
+			// Handle explosions (deal damage immediately)
+			if (this.particleSystem) {
+				for (const explosion of this.explosions) {
+					explosion.dealDamage(this.enemies);
+					explosion.spawnParticles(this.particleSystem);
+				}
+			}
+			this.explosions = []; // Clear explosions after processing
+
+			// Remove dead projectiles
+			this.projectiles = this.projectiles.filter((p) => p.isAlive);
+
+			// Remove despawned enemies and update score
+			const despawnedEnemies: Enemy[] = [];
+			this.enemies = this.enemies.filter((enemy) => {
+				if (enemy.shouldDespawn()) {
+					despawnedEnemies.push(enemy);
+					return false;
+				}
+				return true;
+			});
+
+			// Update score for killed enemies
+			if (despawnedEnemies.length > 0) {
+				this.score += despawnedEnemies.length * 100; // 100 points per kill
+
+				// Remove entities belonging to despawned enemies
+				for (const enemy of despawnedEnemies) {
+					for (const entity of enemy.entities) {
+						const idx = this.entities.indexOf(entity);
+						if (idx >= 0) {
+							this.entities.splice(idx, 1);
+						}
+					}
+				}
+			}
 		}
 
 		// Update enemy AI (continues during game over)
@@ -573,6 +726,43 @@ export class Game {
 		if (this.gameState === GameState.PLAYING || this.gameState === GameState.GAME_OVER) {
 			for (const enemy of this.enemies) {
 				enemy.applyMovement(deltaTime, this.physics);
+			}
+		}
+
+		// Update particle system (every frame for smooth animation)
+		if (this.particleSystem) {
+			this.particleSystem.update(deltaTime);
+		}
+
+		// Render projectiles (update their particle effects)
+		if (this.gameState === GameState.PLAYING) {
+			for (const projectile of this.projectiles) {
+				projectile.render(deltaTime);
+			}
+		}
+
+		// Enemy spawning (only during gameplay)
+		if (this.gameState === GameState.PLAYING && this.cachedAtlas && this.player) {
+			this.enemySpawnTimer += deltaTime;
+
+			if (this.enemySpawnTimer >= this.enemySpawnInterval && this.enemies.length < this.maxEnemies) {
+				this.enemySpawnTimer = 0;
+
+				// Determine group size (1-3 enemies)
+				const groupSize = Math.min(
+					1 + Math.floor(Math.random() * 3),
+					this.maxEnemies - this.enemies.length,
+				);
+
+				// Spawn at a random position 10-15 units away from player
+				const playerPos = this.player.getPosition();
+				const angle = Math.random() * Math.PI * 2;
+				const distance = 10 + Math.random() * 5;
+				const spawnX = playerPos[0] + Math.cos(angle) * distance;
+				const spawnZ = playerPos[2] + Math.sin(angle) * distance;
+
+				this.spawnEnemyGroup(this.cachedAtlas, spawnX, spawnZ, groupSize);
+				console.log(`Spawned ${groupSize} enemies at distance ${distance.toFixed(1)}`);
 			}
 		}
 	}

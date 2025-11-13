@@ -79,6 +79,20 @@ export class Camera {
 	}
 
 	/**
+	 * Get the view matrix for rendering
+	 */
+	getViewMatrix(): mat4 {
+		return this.viewMatrix;
+	}
+
+	/**
+	 * Get the projection matrix for rendering
+	 */
+	getProjectionMatrix(): mat4 {
+		return this.projectionMatrix;
+	}
+
+	/**
 	 * Rotate the camera to a new angle with smooth spring physics
 	 */
 	rotateTo(angle: number): void {

@@ -3,6 +3,7 @@ import { Entity } from "./Entity.ts";
 import type { Mesh } from "./Mesh.ts";
 import type { SphereCollider } from "./physics/Collider.ts";
 import type { Physics } from "./physics/Physics.ts";
+import type { Weapon } from "./Weapon.ts";
 
 export class Player {
 	public entities: Entity[];
@@ -19,6 +20,9 @@ export class Player {
 	// Health
 	public health: number = 100;
 	public maxHealth: number = 100;
+
+	// Weapons
+	public weapons: Weapon[] = [];
 
 	constructor(meshes: Mesh[]) {
 		this.position = vec3.fromValues(0, -0.5, 0);
