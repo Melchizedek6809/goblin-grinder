@@ -26,8 +26,22 @@ import depthVertexShaderSource from "./shaders/depth.vert?raw";
 // Import UI components
 import type { HealthDisplay } from "./components/health-display.ts";
 import type { FpsDisplay } from "./components/fps-display.ts";
+import type { ScoreDisplay } from "./components/score-display.ts";
+import type { MainMenu } from "./components/main-menu.ts";
+import type { GameOverScreen } from "./components/game-over-screen.ts";
 import "./components/health-display.ts";
 import "./components/fps-display.ts";
+import "./components/score-display.ts";
+import "./components/main-menu.ts";
+import "./components/game-over-screen.ts";
+
+const GameState = {
+	MENU: 0,
+	PLAYING: 1,
+	GAME_OVER: 2,
+} as const;
+
+type GameState = (typeof GameState)[keyof typeof GameState];
 
 export class Game {
 	public readonly rootElement: HTMLElement;
@@ -59,10 +73,20 @@ export class Game {
 	// UI elements
 	private healthDisplay: HealthDisplay | null = null;
 	private fpsDisplay: FpsDisplay | null = null;
+	private scoreDisplay: ScoreDisplay | null = null;
+	private mainMenu: MainMenu | null = null;
+	private gameOverScreen: GameOverScreen | null = null;
 
 	// FPS tracking
 	private fpsFrameTimes: number[] = [];
 	private fpsUpdateCounter: number = 0;
+
+	// Game state
+	private gameState: GameState = GameState.MENU;
+	private score: number = 0;
+
+	// Cache for loaded assets (to avoid reloading on restart)
+	private cachedAtlas: MeshAtlas | null = null;
 
 	constructor(rootElement: HTMLElement) {
 		this.rootElement = rootElement;
@@ -74,9 +98,23 @@ export class Game {
 		Promise.all([
 			customElements.whenDefined("health-display"),
 			customElements.whenDefined("fps-display"),
+			customElements.whenDefined("score-display"),
+			customElements.whenDefined("main-menu"),
+			customElements.whenDefined("game-over-screen"),
 		]).then(() => {
 			this.healthDisplay = document.querySelector("health-display");
 			this.fpsDisplay = document.querySelector("fps-display");
+			this.scoreDisplay = document.querySelector("score-display");
+			this.mainMenu = document.querySelector("main-menu");
+			this.gameOverScreen = document.querySelector("game-over-screen");
+
+			// Set up menu event listeners
+			this.mainMenu?.addEventListener("start-game", () => this.startGame());
+			this.gameOverScreen?.addEventListener("restart-game", () => this.restartGame());
+			this.gameOverScreen?.addEventListener("back-to-menu", () => this.backToMenu());
+
+			// Initialize UI state
+			this.updateUIVisibility();
 		});
 
 		window.addEventListener("resize", this.resize.bind(this));
@@ -93,9 +131,9 @@ export class Game {
 
 		this.inputSource = new KeyboardInput();
 		this.initContext();
-		this.initScene().then(() => {
-			this.draw();
-		});
+
+		// Start render loop immediately (but game won't update until PLAYING state)
+		this.draw();
 	}
 
 	private resize() {
@@ -158,6 +196,9 @@ export class Game {
 		}
 	}
 
+	/**
+	 * Initialize or reset the game scene
+	 */
 	private async initScene() {
 		if (!this.gl) {
 			throw new Error("WebGL2 not supported");
@@ -165,33 +206,49 @@ export class Game {
 
 		const gl = this.gl;
 
-		// Enable depth testing
-		gl.enable(gl.DEPTH_TEST);
-		gl.depthFunc(gl.LEQUAL);
+		// Clear existing game state
+		this.entities = [];
+		this.lights = [];
+		this.enemies = [];
+		this.physics = new Physics();
+		this.score = 0;
 
-		// Create shaders
-		this.shader = new Shader(gl, vertexShaderSource, fragmentShaderSource);
-		this.depthShader = new Shader(
-			gl,
-			depthVertexShaderSource,
-			depthFragmentShaderSource,
-		);
+		// Reset camera and shader state (only if not already initialized)
+		if (!this.shader) {
+			// Enable depth testing
+			gl.enable(gl.DEPTH_TEST);
+			gl.depthFunc(gl.LEQUAL);
 
-		// Create debug renderer
-		this.debugRenderer = new DebugRenderer(gl);
+			// Create shaders
+			this.shader = new Shader(gl, vertexShaderSource, fragmentShaderSource);
+			this.depthShader = new Shader(
+				gl,
+				depthVertexShaderSource,
+				depthFragmentShaderSource,
+			);
 
-		// Generate cloud noise texture (512x512)
-		this.noiseTexture = new NoiseTexture(gl, 512);
+			// Create debug renderer
+			this.debugRenderer = new DebugRenderer(gl);
 
-		// Random starting offset for clouds to avoid always seeing the same pattern
-		this.cloudOffset = Math.random() * 10000;
+			// Generate cloud noise texture (512x512)
+			this.noiseTexture = new NoiseTexture(gl, 512);
 
-		// Create camera (isometric-style view)
+			// Random starting offset for clouds to avoid always seeing the same pattern
+			this.cloudOffset = Math.random() * 10000;
+		}
+
+		// Create camera (isometric-style view) - shader is guaranteed to exist here
+		if (!this.shader) {
+			throw new Error("Shader not initialized");
+		}
 		this.camera = new Camera(gl, this.shader);
 		this.camera.setPosition(5, 8, 5);
 		this.camera.setTarget(0, 0, 0);
 
 		// Create light (rotated 30 degrees around Y axis)
+		if (!this.depthShader) {
+			throw new Error("Depth shader not initialized");
+		}
 		const mainLight = new Light(
 			gl,
 			this.depthShader,
@@ -209,9 +266,15 @@ export class Game {
 		ground.setScale(64, 1, 64);
 		this.entities.push(ground);
 
-		// Load all meshes from atlas
-		const atlas = new MeshAtlas();
-		await atlas.init(gl);
+		// Load or reuse cached atlas
+		let atlas: MeshAtlas;
+		if (this.cachedAtlas) {
+			atlas = this.cachedAtlas;
+		} else {
+			atlas = new MeshAtlas();
+			await atlas.init(gl);
+			this.cachedAtlas = atlas;
+		}
 
 		// Create player from atlas
 		this.player = new Player(atlas.mage);
@@ -295,8 +358,65 @@ export class Game {
 		});
 	}
 
+	/**
+	 * Start a new game
+	 */
+	private async startGame() {
+		await this.initScene();
+		this.gameState = GameState.PLAYING;
+		this.updateUIVisibility();
+	}
+
+	/**
+	 * Restart the game from game over screen
+	 */
+	private async restartGame() {
+		await this.initScene();
+		this.gameState = GameState.PLAYING;
+		this.updateUIVisibility();
+	}
+
+	/**
+	 * Return to main menu
+	 */
+	private backToMenu() {
+		this.gameState = GameState.MENU;
+		this.updateUIVisibility();
+	}
+
+	/**
+	 * Update UI element visibility based on game state
+	 */
+	private updateUIVisibility() {
+		if (!this.mainMenu || !this.gameOverScreen || !this.healthDisplay || !this.scoreDisplay) {
+			return;
+		}
+
+		switch (this.gameState) {
+			case GameState.MENU:
+				this.mainMenu.visible = true;
+				this.gameOverScreen.visible = false;
+				this.healthDisplay.style.display = "none";
+				this.scoreDisplay.visible = false;
+				break;
+			case GameState.PLAYING:
+				this.mainMenu.visible = false;
+				this.gameOverScreen.visible = false;
+				this.healthDisplay.style.display = "block";
+				this.scoreDisplay.visible = true;
+				break;
+			case GameState.GAME_OVER:
+				this.mainMenu.visible = false;
+				this.gameOverScreen.visible = true;
+				this.gameOverScreen.score = this.score;
+				this.healthDisplay.style.display = "none";
+				this.scoreDisplay.visible = false;
+				break;
+		}
+	}
+
 	private updateCamera(deltaTime: number) {
-		if (!this.camera || !this.player) return;
+		if (!this.camera || !this.player || this.gameState !== GameState.PLAYING) return;
 
 		// Poll input state
 		const input = this.inputSource.poll(this.camera.getAngle());
@@ -379,13 +499,18 @@ export class Game {
 	}
 
 	/**
-	 * Update UI elements (health, FPS, etc.)
+	 * Update UI elements (health, FPS, score, etc.)
 	 */
 	private updateUI(deltaTime: number) {
 		// Update health display
 		if (this.healthDisplay && this.player) {
 			this.healthDisplay.health = this.player.health;
 			this.healthDisplay.maxHealth = this.player.maxHealth;
+		}
+
+		// Update score display
+		if (this.scoreDisplay) {
+			this.scoreDisplay.score = this.score;
 		}
 
 		// Calculate FPS (rolling average over last 60 frames)
@@ -406,6 +531,12 @@ export class Game {
 			this.fpsDisplay.visible = this.debugMode;
 			this.fpsUpdateCounter = 0;
 		}
+
+		// Check for game over condition
+		if (this.gameState === GameState.PLAYING && this.player && this.player.health <= 0) {
+			this.gameState = GameState.GAME_OVER;
+			this.updateUIVisibility();
+		}
 	}
 
 	/**
@@ -414,12 +545,16 @@ export class Game {
 	private fixedUpdate() {
 		if (!this.player) return;
 
-		// Update player logic
-		this.player.update(this.fixedTimestep);
+		// Update player logic (only during gameplay)
+		if (this.gameState === GameState.PLAYING) {
+			this.player.update(this.fixedTimestep);
+		}
 
-		// Update enemy AI
-		for (const enemy of this.enemies) {
-			enemy.update(this.player);
+		// Update enemy AI (continues during game over)
+		if (this.gameState === GameState.PLAYING || this.gameState === GameState.GAME_OVER) {
+			for (const enemy of this.enemies) {
+				enemy.update(this.player);
+			}
 		}
 	}
 
@@ -427,9 +562,11 @@ export class Game {
 	 * Apply movement interpolation - runs every render frame for smooth movement
 	 */
 	private applyMovement(deltaTime: number) {
-		// Apply enemy movement with physics
-		for (const enemy of this.enemies) {
-			enemy.applyMovement(deltaTime, this.physics);
+		// Apply enemy movement with physics (continues during game over)
+		if (this.gameState === GameState.PLAYING || this.gameState === GameState.GAME_OVER) {
+			for (const enemy of this.enemies) {
+				enemy.applyMovement(deltaTime, this.physics);
+			}
 		}
 	}
 }
