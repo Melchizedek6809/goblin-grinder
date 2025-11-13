@@ -1,6 +1,7 @@
 import { vec3 } from "gl-matrix";
 import { Camera } from "./Camera.ts";
 import { DebugRenderer } from "./DebugRenderer.ts";
+import { Enemy } from "./Enemy.ts";
 import { Entity } from "./Entity.ts";
 import { Light } from "./Light.ts";
 import { Mesh } from "./Mesh.ts";
@@ -37,12 +38,17 @@ export class Game {
 	private entities: Renderable[] = [];
 	private lights: Light[] = [];
 	private player: Player | null = null;
+	private enemies: Enemy[] = [];
 
 	private inputSource: InputSource;
 	private physics: Physics = new Physics();
 	private debugRenderer: DebugRenderer | null = null;
 	private debugMode: boolean = false;
 	private lastFrameTime: number = 0;
+
+	// Fixed timestep for game logic updates
+	private readonly fixedTimestep: number = 1 / 30; // 30 updates per second
+	private accumulator: number = 0;
 
 	constructor(rootElement: HTMLElement) {
 		this.rootElement = rootElement;
@@ -200,6 +206,43 @@ export class Game {
 			this.physics.addCollider(playerCollider);
 		}
 
+		// Create enemies (skeletons)
+		const enemy1 = new Enemy(atlas.skeleton);
+		enemy1.setPosition(3, -0.5, 2);
+		enemy1.setRotation(Math.PI / 4); // Face toward player area
+		this.entities.push(...enemy1.entities);
+		this.enemies.push(enemy1);
+
+		// Add collider to enemy1 (layer 1 = enemy, collide with everything including other enemies)
+		if (enemy1.entities.length > 0) {
+			const enemy1Collider = createSphereCollider(
+				enemy1.position,
+				0.4, // radius
+				1, // layer 1 = enemy
+				0xffffffff, // collide with all layers (including other enemies)
+			);
+			enemy1.entities[0].collider = enemy1Collider;
+			this.physics.addCollider(enemy1Collider);
+		}
+
+		const enemy2 = new Enemy(atlas.skeleton);
+		enemy2.setPosition(-4, -0.5, -3);
+		enemy2.setRotation(-Math.PI / 3); // Face toward player area
+		this.entities.push(...enemy2.entities);
+		this.enemies.push(enemy2);
+
+		// Add collider to enemy2 (layer 1 = enemy, collide with everything including other enemies)
+		if (enemy2.entities.length > 0) {
+			const enemy2Collider = createSphereCollider(
+				enemy2.position,
+				0.4, // radius
+				1, // layer 1 = enemy
+				0xffffffff, // collide with all layers (including other enemies)
+			);
+			enemy2.entities[0].collider = enemy2Collider;
+			this.physics.addCollider(enemy2Collider);
+		}
+
 		// Spawn static objects
 		this.spawnStaticObjects(() => new StaticTree(atlas.getRandomTree()), 30, {
 			yOffset: -0.6,
@@ -267,17 +310,24 @@ export class Game {
 				: Math.min((timestamp - this.lastFrameTime) / 1000, 0.1); // Cap at 100ms
 		this.lastFrameTime = timestamp;
 
-		// Update camera controls
+		// Add to accumulator for fixed timestep updates
+		this.accumulator += deltaTime;
+
+		// Run fixed timestep updates (game logic at 30fps)
+		while (this.accumulator >= this.fixedTimestep) {
+			this.fixedUpdate();
+			this.accumulator -= this.fixedTimestep;
+		}
+
+		// Update camera controls (every frame for responsive input)
 		this.updateCamera(deltaTime);
+
+		// Apply movement interpolation for smooth rendering (every frame)
+		this.applyMovement(deltaTime);
 
 		// Clear
 		gl.clearColor(0.1, 0.1, 0.15, 1);
 		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-		// Update player
-		if (this.player) {
-			this.player.update(deltaTime);
-		}
 
 		// Update lights to follow player
 		if (this.player && this.lights.length > 0) {
@@ -299,6 +349,32 @@ export class Game {
 		// Draw debug visualization if enabled
 		if (this.debugMode && this.debugRenderer && this.camera) {
 			this.debugRenderer.renderColliders(this.physics, this.camera);
+		}
+	}
+
+	/**
+	 * Fixed timestep update - runs game logic at consistent 30fps
+	 */
+	private fixedUpdate() {
+		if (!this.player) return;
+
+		// Update player logic
+		this.player.update(this.fixedTimestep);
+
+		// Update enemy AI
+		const playerPos = this.player.getPosition();
+		for (const enemy of this.enemies) {
+			enemy.update(playerPos);
+		}
+	}
+
+	/**
+	 * Apply movement interpolation - runs every render frame for smooth movement
+	 */
+	private applyMovement(deltaTime: number) {
+		// Apply enemy movement with physics
+		for (const enemy of this.enemies) {
+			enemy.applyMovement(deltaTime, this.physics);
 		}
 	}
 }

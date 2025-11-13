@@ -1,0 +1,214 @@
+import { quat, vec3 } from "gl-matrix";
+import { Entity } from "./Entity.ts";
+import type { Mesh } from "./Mesh.ts";
+import type { SphereCollider } from "./physics/Collider.ts";
+import type { Physics } from "./physics/Physics.ts";
+
+export type EnemyState = "idle" | "chase" | "attack";
+
+export class Enemy {
+	public entities: Entity[];
+	public position: vec3;
+	public velocity: vec3;
+	public goalVelocity: vec3; // Target velocity set by AI
+	public rotation: number = 0; // Y-axis rotation in radians
+
+	// AI state machine
+	public state: EnemyState = "idle";
+	private attackTimer: number = 0; // Counts fixed update ticks during attack
+
+	// Movement parameters
+	public moveSpeed: number = 1.5; // Base movement speed (slower than player's 3.0)
+	public acceleration: number = 20.0; // How fast we reach goal velocity (units/s²)
+
+	// Detection ranges
+	public chaseStartRange: number = 8.0; // Start chasing when player is this close
+	public chaseEndRange: number = 10.0; // Stop chasing when player is this far (higher to avoid flickering)
+	public attackRange: number = 1.5; // Attack when player is this close
+	public attackDuration: number = 3; // Number of fixed update ticks to attack for
+
+	constructor(meshes: Mesh[]) {
+		this.position = vec3.fromValues(0, -0.5, 0);
+		this.velocity = vec3.create();
+		this.goalVelocity = vec3.create();
+		this.entities = meshes.map((mesh) => {
+			const entity = new Entity(mesh);
+			entity.setPosition(0, 0, 0);
+			entity.setUniformScale(0.5);
+			return entity;
+		});
+	}
+
+	setPosition(x: number, y: number, z: number): void {
+		vec3.set(this.position, x, y, z);
+		this.updateEntities();
+	}
+
+	setRotation(radians: number): void {
+		this.rotation = radians;
+		this.updateEntities();
+	}
+
+	private updateEntities(): void {
+		const rotation = quat.create();
+		quat.fromEuler(rotation, 0, (this.rotation * 180) / Math.PI, 0);
+
+		for (const entity of this.entities) {
+			entity.setPosition(this.position[0], this.position[1], this.position[2]);
+			entity.rotation = rotation;
+
+			// Update collider position if it exists
+			if (entity.collider) {
+				vec3.copy(entity.collider.center, this.position);
+			}
+		}
+	}
+
+	/**
+	 * Update AI logic (called at fixed timestep, e.g., 30fps)
+	 * State machine that controls enemy behavior based on player position
+	 */
+	update(playerPosition: vec3): void {
+		// Calculate distance and direction to player
+		const toPlayer = vec3.create();
+		vec3.subtract(toPlayer, playerPosition, this.position);
+		const distanceToPlayer = vec3.length(toPlayer);
+
+		// State machine transitions
+		switch (this.state) {
+			case "idle":
+				// Transition: idle -> chase (player gets close)
+				if (distanceToPlayer < this.chaseStartRange) {
+					this.state = "chase";
+				}
+				// Idle: no movement
+				vec3.set(this.goalVelocity, 0, 0, 0);
+				break;
+
+			case "chase":
+				// Transition: chase -> attack (player gets very close)
+				if (distanceToPlayer < this.attackRange) {
+					this.state = "attack";
+					this.attackTimer = this.attackDuration;
+					vec3.set(this.goalVelocity, 0, 0, 0); // Stop moving
+					break;
+				}
+
+				// Transition: chase -> idle (player gets too far away)
+				if (distanceToPlayer > this.chaseEndRange) {
+					this.state = "idle";
+					vec3.set(this.goalVelocity, 0, 0, 0);
+					break;
+				}
+
+				// Chase: move towards player
+				if (distanceToPlayer > 0.1) {
+					vec3.normalize(toPlayer, toPlayer);
+					this.goalVelocity[0] = toPlayer[0] * this.moveSpeed;
+					this.goalVelocity[1] = 0;
+					this.goalVelocity[2] = toPlayer[2] * this.moveSpeed;
+
+					// Update rotation to face player
+					this.rotation = Math.atan2(toPlayer[0], toPlayer[2]);
+				}
+				break;
+
+			case "attack":
+				// Don't move during attack
+				vec3.set(this.goalVelocity, 0, 0, 0);
+
+				// Always face the player during attack
+				if (distanceToPlayer > 0.1) {
+					vec3.normalize(toPlayer, toPlayer);
+					this.rotation = Math.atan2(toPlayer[0], toPlayer[2]);
+				}
+
+				// Count down attack timer
+				this.attackTimer--;
+
+				// Transition: attack -> chase (attack duration finished)
+				if (this.attackTimer <= 0) {
+					this.state = "chase";
+				}
+				break;
+		}
+	}
+
+	/**
+	 * Apply movement and interpolate velocity (called every render frame)
+	 * This creates smooth movement between fixed updates
+	 */
+	applyMovement(deltaTime: number, physics?: Physics): void {
+		// Interpolate current velocity towards goal velocity
+		const velDiffX = this.goalVelocity[0] - this.velocity[0];
+		const velDiffZ = this.goalVelocity[2] - this.velocity[2];
+
+		this.velocity[0] += velDiffX * this.acceleration * deltaTime;
+		this.velocity[2] += velDiffZ * this.acceleration * deltaTime;
+
+		// Clamp velocity to prevent it from exceeding move speed
+		const currentSpeed = Math.sqrt(
+			this.velocity[0] * this.velocity[0] + this.velocity[2] * this.velocity[2],
+		);
+		if (currentSpeed > this.moveSpeed) {
+			const scale = this.moveSpeed / currentSpeed;
+			this.velocity[0] *= scale;
+			this.velocity[2] *= scale;
+		}
+
+		// Calculate new position based on velocity
+		const oldPos = vec3.clone(this.position);
+		const newPos = vec3.create();
+		newPos[0] = this.position[0] + this.velocity[0] * deltaTime;
+		newPos[1] = this.position[1];
+		newPos[2] = this.position[2] + this.velocity[2] * deltaTime;
+
+		// Apply physics collision if available
+		if (physics && this.entities[0]?.collider?.type === "sphere") {
+			const collider = this.entities[0].collider as SphereCollider;
+			const safePos = physics.sweepSphere(
+				oldPos,
+				newPos,
+				collider.radius,
+				1, // enemy layer
+				0xffffffff, // collide with all layers (including other enemies)
+				collider, // exclude self from collision
+			);
+
+			// Check if we collided (position was adjusted)
+			const didCollide = !vec3.equals(safePos, newPos);
+			if (didCollide) {
+				// If we hit something, zero out velocity in that direction
+				const moveDir = vec3.create();
+				vec3.subtract(moveDir, newPos, oldPos);
+				const actualMove = vec3.create();
+				vec3.subtract(actualMove, safePos, oldPos);
+
+				// If we couldn't move in X, zero X velocity
+				if (Math.abs(moveDir[0]) > 0.001 && Math.abs(actualMove[0]) < 0.001) {
+					this.velocity[0] = 0;
+				}
+				// If we couldn't move in Z, zero Z velocity
+				if (Math.abs(moveDir[2]) > 0.001 && Math.abs(actualMove[2]) < 0.001) {
+					this.velocity[2] = 0;
+				}
+			}
+
+			vec3.copy(this.position, safePos);
+		} else {
+			// No physics - just move directly
+			vec3.copy(this.position, newPos);
+		}
+
+		// Update entity transforms
+		this.updateEntities();
+	}
+
+	getPosition(): vec3 {
+		return this.position;
+	}
+
+	getState(): EnemyState {
+		return this.state;
+	}
+}

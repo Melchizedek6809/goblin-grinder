@@ -86,7 +86,8 @@ export class Player {
 				newPos,
 				collider.radius,
 				0, // player layer
-				0xfffffffe, // collide with everything except player layer
+				0xffffffff, // collide with all layers
+				collider, // exclude self from collision
 			);
 
 			// Check if we collided (position was adjusted)

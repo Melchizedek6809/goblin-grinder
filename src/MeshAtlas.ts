@@ -5,6 +5,8 @@ import bush2FGlbUrl from "./assets/models/Bush2F.glb?url";
 // Note: ?url suffix tells Vite to treat these as URL assets
 import mageGlbUrl from "./assets/models/Mage.glb?url";
 import magePngUrl from "./assets/models/Mage.png";
+import skeletonGlbUrl from "./assets/models/Skeleton.glb?url";
+import skeletonPngUrl from "./assets/models/Skeleton.png";
 import naturePngUrl from "./assets/models/Nature.png";
 import rock1AGlbUrl from "./assets/models/Rock1A.glb?url";
 import rock1DGlbUrl from "./assets/models/Rock1D.glb?url";
@@ -25,6 +27,9 @@ import { Mesh } from "./Mesh.ts";
 export class MeshAtlas {
 	// Player meshes (multiple parts)
 	public mage: Mesh[] = [];
+
+	// Enemy meshes (multiple parts)
+	public skeleton: Mesh[] = [];
 
 	// Tree meshes (single mesh each)
 	public tree3A: Mesh | null = null;
@@ -52,6 +57,9 @@ export class MeshAtlas {
 	async init(gl: WebGL2RenderingContext): Promise<void> {
 		// Load player model (multiple meshes)
 		this.mage = await Mesh.allFromUrl(gl, mageGlbUrl, magePngUrl);
+
+		// Load enemy models (multiple meshes)
+		this.skeleton = await Mesh.allFromUrl(gl, skeletonGlbUrl, skeletonPngUrl);
 
 		// Load tree, rock, and bush models (all share the same Nature.png texture)
 		const [

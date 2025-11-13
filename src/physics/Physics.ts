@@ -86,6 +86,8 @@ export class Physics {
 	 *
 	 * This is useful for character movement - you can move the character
 	 * as far as possible without penetrating obstacles
+	 *
+	 * @param excludeCollider - Optional collider to exclude from collision checks (e.g., the entity's own collider)
 	 */
 	sweepSphere(
 		_start: vec3,
@@ -93,6 +95,7 @@ export class Physics {
 		radius: number,
 		layer = 0,
 		mask = 0xffffffff,
+		excludeCollider?: Collider,
 	): vec3 {
 		// Create a temporary test collider at the destination
 		const testCollider: SphereCollider = {
@@ -104,8 +107,11 @@ export class Physics {
 			mask,
 		};
 
-		// Check for collisions at destination
-		const collisions = this.getCollisions(testCollider);
+		// Check for collisions at destination, filtering out the excluded collider
+		const allCollisions = this.getCollisions(testCollider);
+		const collisions = excludeCollider
+			? allCollisions.filter((c) => c !== excludeCollider)
+			: allCollisions;
 
 		// If no collisions, we can move to the destination
 		if (collisions.length === 0) {
