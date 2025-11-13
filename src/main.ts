@@ -113,8 +113,15 @@ export class Game {
 			this.gameOverScreen?.addEventListener("restart-game", () => this.restartGame());
 			this.gameOverScreen?.addEventListener("back-to-menu", () => this.backToMenu());
 
-			// Initialize UI state
-			this.updateUIVisibility();
+			// Check for skipMenu URL parameter
+			const urlParams = new URLSearchParams(window.location.search);
+			if (urlParams.get("skipMenu") === "1") {
+				// Skip menu and start game immediately
+				this.startGame();
+			} else {
+				// Initialize UI state (show menu)
+				this.updateUIVisibility();
+			}
 		});
 
 		window.addEventListener("resize", this.resize.bind(this));
