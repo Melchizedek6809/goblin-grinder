@@ -1,0 +1,146 @@
+import type { mat4, vec3 } from "gl-matrix";
+
+export class Shader {
+	public program: WebGLProgram;
+	private gl: WebGL2RenderingContext;
+	private uniformLocations: Map<string, WebGLUniformLocation> = new Map();
+	private attributeLocations: Map<string, number> = new Map();
+
+	constructor(
+		gl: WebGL2RenderingContext,
+		vertexSource: string,
+		fragmentSource: string,
+	) {
+		this.gl = gl;
+		this.program = this.createProgram(vertexSource, fragmentSource);
+	}
+
+	private createShader(type: number, source: string): WebGLShader {
+		const shader = this.gl.createShader(type);
+		if (!shader) {
+			throw new Error("Failed to create shader");
+		}
+
+		this.gl.shaderSource(shader, source);
+		this.gl.compileShader(shader);
+
+		if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
+			const info = this.gl.getShaderInfoLog(shader);
+			this.gl.deleteShader(shader);
+			throw new Error(`Shader compilation failed: ${info}`);
+		}
+
+		return shader;
+	}
+
+	private createProgram(
+		vertexSource: string,
+		fragmentSource: string,
+	): WebGLProgram {
+		const vertexShader = this.createShader(this.gl.VERTEX_SHADER, vertexSource);
+		const fragmentShader = this.createShader(
+			this.gl.FRAGMENT_SHADER,
+			fragmentSource,
+		);
+
+		const program = this.gl.createProgram();
+		if (!program) {
+			throw new Error("Failed to create program");
+		}
+
+		this.gl.attachShader(program, vertexShader);
+		this.gl.attachShader(program, fragmentShader);
+		this.gl.linkProgram(program);
+
+		if (!this.gl.getProgramParameter(program, this.gl.LINK_STATUS)) {
+			const info = this.gl.getProgramInfoLog(program);
+			this.gl.deleteProgram(program);
+			throw new Error(`Program linking failed: ${info}`);
+		}
+
+		this.gl.deleteShader(vertexShader);
+		this.gl.deleteShader(fragmentShader);
+
+		return program;
+	}
+
+	use(): void {
+		this.gl.useProgram(this.program);
+	}
+
+	getUniformLocation(name: string): WebGLUniformLocation {
+		if (!this.uniformLocations.has(name)) {
+			const location = this.gl.getUniformLocation(this.program, name);
+			if (location === null) {
+				throw new Error(`Uniform ${name} not found in shader`);
+			}
+			this.uniformLocations.set(name, location);
+			return location;
+		}
+		const location = this.uniformLocations.get(name);
+		if (!location) {
+			throw new Error(`Uniform ${name} not found in cache`);
+		}
+		return location;
+	}
+
+	getAttributeLocation(name: string): number {
+		if (!this.attributeLocations.has(name)) {
+			const location = this.gl.getAttribLocation(this.program, name);
+			if (location === -1) {
+				throw new Error(`Attribute ${name} not found in shader`);
+			}
+			this.attributeLocations.set(name, location);
+			return location;
+		}
+		const location = this.attributeLocations.get(name);
+		if (location === undefined) {
+			throw new Error(`Attribute ${name} not found in cache`);
+		}
+		return location;
+	}
+
+	setUniformMatrix4fv(name: string, value: mat4): void {
+		this.gl.uniformMatrix4fv(
+			this.getUniformLocation(name),
+			false,
+			value as Float32Array,
+		);
+	}
+
+	setUniform3fv(name: string, value: vec3 | number[]): void {
+		this.gl.uniform3fv(this.getUniformLocation(name), value as Float32Array);
+	}
+
+	setUniform1f(name: string, value: number): void {
+		this.gl.uniform1f(this.getUniformLocation(name), value);
+	}
+
+	setUniform1i(name: string, value: number): void {
+		this.gl.uniform1i(this.getUniformLocation(name), value);
+	}
+
+	setUniformMatrix4fvArray(name: string, values: mat4[]): void {
+		for (let i = 0; i < values.length; i++) {
+			const location = this.gl.getUniformLocation(
+				this.program,
+				`${name}[${i}]`,
+			);
+			if (location) {
+				this.gl.uniformMatrix4fv(location, false, values[i] as Float32Array);
+			}
+		}
+	}
+
+	setUniform3fvArray(name: string, values: vec3[]): void {
+		for (let i = 0; i < values.length; i++) {
+			const location = this.gl.getUniformLocation(
+				this.program,
+				`${name}[${i}]`,
+			);
+			if (location) {
+				this.gl.uniform3fv(location, values[i] as Float32Array);
+			}
+		}
+	}
+}
