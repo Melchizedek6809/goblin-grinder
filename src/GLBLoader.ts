@@ -209,6 +209,9 @@ export class GLBLoader {
 		const vertexCount = positions.length / 3;
 		const vertices = new Float32Array(vertexCount * 11);
 
+		// Calculate components per attribute (to avoid repeated division in loop)
+		const componentsPerColor = colors ? colors.length / vertexCount : 0;
+
 		for (let i = 0; i < vertexCount; i++) {
 			const vOffset = i * 11;
 			const pOffset = i * 3;
@@ -240,8 +243,9 @@ export class GLBLoader {
 			}
 
 			// Color (default to white if not provided)
+			// glTF COLOR_0 can be VEC3 (RGB) or VEC4 (RGBA), we only use RGB
 			if (colors) {
-				const cOffset = i * (colors.length / vertexCount);
+				const cOffset = i * componentsPerColor;
 				vertices[vOffset + 8] = colors[cOffset + 0];
 				vertices[vOffset + 9] = colors[cOffset + 1];
 				vertices[vOffset + 10] = colors[cOffset + 2];

@@ -147,20 +147,24 @@ export class Camera {
 	}
 
 	/**
-	 * Simple frustum culling - check if entity is within visible range
-	 * Uses distance from camera position (3D distance)
+	 * Frustum culling - check if entity is within visible range
+	 * Uses distance from camera position with per-entity bounding sphere
+	 * @param entityPosition - Position of the entity in world space
+	 * @param boundingRadius - Bounding sphere radius of the entity (defaults to 1.0)
 	 */
-	isInFrustum(entityPosition: vec3): boolean {
+	isInFrustum(entityPosition: vec3, boundingRadius: number = 1.0): boolean {
 		// Calculate 3D distance from camera position
 		const dx = entityPosition[0] - this.position[0];
 		const dy = entityPosition[1] - this.position[1];
 		const dz = entityPosition[2] - this.position[2];
 		const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
-		// Conservative culling radius (visible area + margin for large objects)
-		const cullRadius = 30; // Adjust based on your scene scale
+		// Base culling radius (visible area from camera)
+		const baseCullRadius = 30;
 
-		return distance < cullRadius;
+		// Account for entity's bounding sphere - an entity is visible if any part of it
+		// could be within the view frustum
+		return distance < baseCullRadius + boundingRadius;
 	}
 
 	updateMatrices(aspectRatio: number) {
@@ -240,8 +244,13 @@ export class Camera {
 			// Skip entities without a mesh
 			if (!entity.mesh) continue;
 
-			// Frustum culling - skip entities outside visible area
-			if (!this.isInFrustum(entity.position)) continue;
+			// Frustum culling - calculate bounding radius from entity scale
+			// Approximate bounding sphere radius (assumes mesh fits in a unit cube)
+			const maxScale = Math.max(entity.scale[0], entity.scale[1], entity.scale[2]);
+			const boundingRadius = maxScale * 1.0; // Base radius of 1.0 for unit-sized meshes
+
+			// Skip entities outside visible area
+			if (!this.isInFrustum(entity.position, boundingRadius)) continue;
 
 			const modelMatrix = entity.getModelMatrix();
 			this.shader.setUniformMatrix4fv("u_model", modelMatrix);

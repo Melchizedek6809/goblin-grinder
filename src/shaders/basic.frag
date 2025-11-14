@@ -1,5 +1,6 @@
 #version 300 es
 precision highp float;
+precision highp int;
 
 in vec3 v_color;
 in vec3 v_normal;
@@ -48,27 +49,34 @@ float calculateShadow(vec4 lightSpacePos, int lightIndex) {
     float bias = 0.005;
 
     // PCF (Percentage Closer Filtering) for smooth shadow edges
+    // Using 5-sample plus pattern for better performance (44% fewer samples than 3x3)
     float shadow = 0.0;
     vec2 texelSize = vec2(1.0) / vec2(1024.0); // Shadow map resolution
 
-    // 3x3 PCF kernel
-    for(int x = -1; x <= 1; x++) {
-        for(int y = -1; y <= 1; y++) {
-            vec2 offset = vec2(float(x), float(y)) * texelSize;
-            float closestDepth = 0.0;
+    // Plus-pattern PCF kernel: center + 4 cardinal directions
+    vec2 offsets[5] = vec2[](
+        vec2(0.0, 0.0),   // Center
+        vec2(-1.0, 0.0),  // Left
+        vec2(1.0, 0.0),   // Right
+        vec2(0.0, -1.0),  // Down
+        vec2(0.0, 1.0)    // Up
+    );
 
-            // Sample shadow map - must use constant index
-            if (lightIndex == 0) closestDepth = texture(u_shadowMaps[0], projCoords.xy + offset).r;
-            else if (lightIndex == 1) closestDepth = texture(u_shadowMaps[1], projCoords.xy + offset).r;
-            else if (lightIndex == 2) closestDepth = texture(u_shadowMaps[2], projCoords.xy + offset).r;
-            else if (lightIndex == 3) closestDepth = texture(u_shadowMaps[3], projCoords.xy + offset).r;
+    for(int i = 0; i < 5; i++) {
+        vec2 offset = offsets[i] * texelSize;
+        float closestDepth = 0.0;
 
-            shadow += currentDepth - bias > closestDepth ? 1.0 : 0.0;
-        }
+        // Sample shadow map - must use constant index
+        if (lightIndex == 0) closestDepth = texture(u_shadowMaps[0], projCoords.xy + offset).r;
+        else if (lightIndex == 1) closestDepth = texture(u_shadowMaps[1], projCoords.xy + offset).r;
+        else if (lightIndex == 2) closestDepth = texture(u_shadowMaps[2], projCoords.xy + offset).r;
+        else if (lightIndex == 3) closestDepth = texture(u_shadowMaps[3], projCoords.xy + offset).r;
+
+        shadow += currentDepth - bias > closestDepth ? 1.0 : 0.0;
     }
 
-    // Average the 9 samples
-    shadow /= 9.0;
+    // Average the 5 samples
+    shadow /= 5.0;
 
     return shadow;
 }

@@ -10,8 +10,8 @@ import { NoiseTexture } from "./NoiseTexture.ts";
 import { Player } from "./Player.ts";
 import type { Renderable } from "./Renderable.ts";
 import { Shader } from "./Shader.ts";
+import { SpawnManager } from "./SpawnManager.ts";
 import { StaticBush } from "./StaticBush.ts";
-import type { StaticObject } from "./StaticObject.ts";
 import { StaticRock } from "./StaticRock.ts";
 import { StaticTree } from "./StaticTree.ts";
 import { KeyboardInput } from "./input/KeyboardInput.ts";
@@ -72,6 +72,7 @@ export class Game {
 
 	private inputSource: InputSource;
 	private physics: Physics = new Physics();
+	private spawnManager: SpawnManager | null = null;
 	private debugRenderer: DebugRenderer | null = null;
 	private debugMode: boolean = false;
 	private lastFrameTime: number = 0;
@@ -79,11 +80,6 @@ export class Game {
 	// Fixed timestep for game logic updates
 	private readonly fixedTimestep: number = 1 / 30; // 30 updates per second
 	private accumulator: number = 0;
-
-	// Enemy spawning
-	private enemySpawnTimer: number = 0;
-	private enemySpawnInterval: number = 3.0; // Spawn every 3 seconds
-	private maxEnemies: number = 10;
 
 	// UI elements
 	private healthDisplay: HealthDisplay | null = null;
@@ -170,100 +166,6 @@ export class Game {
 	}
 
 	/**
-	 * Spawn a single enemy at the specified position
-	 */
-	private spawnEnemy(atlas: MeshAtlas, x: number, y: number, z: number): void {
-		const enemy = new Enemy(atlas.skeleton);
-		enemy.setPosition(x, y, z);
-
-		// Face toward player
-		if (this.player) {
-			const playerPos = this.player.getPosition();
-			const dx = playerPos[0] - x;
-			const dz = playerPos[2] - z;
-			enemy.setRotation(Math.atan2(dx, dz));
-		}
-
-		this.entities.push(...enemy.entities);
-		this.enemies.push(enemy);
-
-		// Add collider (layer 1 = enemy, collide with everything including other enemies)
-		if (enemy.entities.length > 0) {
-			const collider = createSphereCollider(
-				enemy.position,
-				0.25, // radius
-				1, // layer 1 = enemy
-				0xffffffff, // collide with all layers
-			);
-			enemy.entities[0].collider = collider;
-			this.physics.addCollider(collider);
-		}
-	}
-
-	/**
-	 * Spawn a group of enemies around a central point
-	 */
-	private spawnEnemyGroup(atlas: MeshAtlas, centerX: number, centerZ: number, count: number): void {
-		for (let i = 0; i < count; i++) {
-			// Spread enemies in a small circle
-			const angle = (Math.PI * 2 * i) / count;
-			const radius = 1.0 + Math.random() * 1.0; // 1-2 units apart
-			const x = centerX + Math.cos(angle) * radius;
-			const z = centerZ + Math.sin(angle) * radius;
-			this.spawnEnemy(atlas, x, -0.5, z);
-		}
-	}
-
-	/**
-	 * Helper to spawn multiple static objects with randomized placement
-	 */
-	private spawnStaticObjects<T extends StaticObject>(
-		factory: () => T,
-		count: number,
-		config: {
-			yOffset: number;
-			minDistance: number;
-			maxDistance: number;
-			minScale: number;
-			maxScale: number;
-			colliderRadius?: number; // Optional collider
-		},
-	): void {
-		for (let i = 0; i < count; i++) {
-			const obj = factory();
-
-			// Random position on the ground plane (avoiding the center)
-			const angle = Math.random() * Math.PI * 2;
-			const distance =
-				config.minDistance +
-				Math.random() * (config.maxDistance - config.minDistance);
-			const x = Math.cos(angle) * distance;
-			const z = Math.sin(angle) * distance;
-
-			obj.setPosition(x, config.yOffset, z);
-			obj.setRotationFromEuler(0, Math.random() * 360, 0);
-
-			const scale =
-				config.minScale + Math.random() * (config.maxScale - config.minScale);
-			obj.setUniformScale(scale);
-
-			// Add collider if specified (layer 2 = environment, collide with all)
-			if (config.colliderRadius !== undefined) {
-				const collider = createSphereCollider(
-					obj.position,
-					config.colliderRadius * scale, // Scale collider with object
-					2, // layer 2 = environment
-					0xffffffff, // collide with all layers
-				);
-				obj.collider = collider;
-				this.physics.addCollider(collider);
-			}
-
-			this.entities.push(obj);
-		}
-	}
-
-	/**
 	 * Initialize or reset the game scene
 	 */
 	private async initScene() {
@@ -280,8 +182,8 @@ export class Game {
 		this.projectiles = [];
 		this.explosions = [];
 		this.physics = new Physics();
+		this.spawnManager = new SpawnManager(this.physics);
 		this.score = 0;
-		this.enemySpawnTimer = 0;
 
 		// Reset camera and shader state (only if not already initialized)
 		if (!this.shader) {
@@ -377,36 +279,36 @@ export class Game {
 		this.player.weapons.push(new FireballWeapon());
 
 		// Spawn initial enemies
-		this.spawnEnemy(atlas, 5, -0.5, 5);
-		this.spawnEnemy(atlas, -5, -0.5, -5);
+		this.spawnManager.spawnEnemy(atlas, 5, -0.5, 5, this.entities, this.enemies);
+		this.spawnManager.spawnEnemy(atlas, -5, -0.5, -5, this.entities, this.enemies);
 
 		// Spawn static objects
-		this.spawnStaticObjects(() => new StaticTree(atlas.getRandomTree()), 30, {
+		this.spawnManager.spawnStaticObjects(() => new StaticTree(atlas.getRandomTree()), 30, {
 			yOffset: -0.6,
 			minDistance: 5,
 			maxDistance: 35,
 			minScale: 0.8,
 			maxScale: 1.2,
 			colliderRadius: 0.5, // Trees have collision
-		});
+		}, this.entities);
 
-		this.spawnStaticObjects(() => new StaticRock(atlas.getRandomRock()), 20, {
+		this.spawnManager.spawnStaticObjects(() => new StaticRock(atlas.getRandomRock()), 20, {
 			yOffset: -0.5,
 			minDistance: 3,
 			maxDistance: 33,
 			minScale: 0.6,
 			maxScale: 1.4,
 			colliderRadius: 0.6, // Rocks have collision
-		});
+		}, this.entities);
 
-		this.spawnStaticObjects(() => new StaticBush(atlas.getRandomBush()), 25, {
+		this.spawnManager.spawnStaticObjects(() => new StaticBush(atlas.getRandomBush()), 25, {
 			yOffset: -0.4,
 			minDistance: 3,
 			maxDistance: 33,
 			minScale: 0.7,
 			maxScale: 1.3,
 			// No collider - bushes are passable
-		});
+		}, this.entities);
 	}
 
 	/**
@@ -714,7 +616,7 @@ export class Game {
 		}
 
 		// Update enemy AI (continues during game over)
-		if (this.gameState === GameState.PLAYING || this.gameState === GameState.GAME_OVER) {
+		if ((this.gameState === GameState.PLAYING || this.gameState === GameState.GAME_OVER) && this.player) {
 			for (const enemy of this.enemies) {
 				enemy.update(this.player);
 			}
@@ -745,29 +647,30 @@ export class Game {
 		}
 
 		// Enemy spawning (only during gameplay)
-		if (this.gameState === GameState.PLAYING && this.cachedAtlas && this.player) {
-			this.enemySpawnTimer += deltaTime;
-
-			if (this.enemySpawnTimer >= this.enemySpawnInterval && this.enemies.length < this.maxEnemies) {
-				this.enemySpawnTimer = 0;
-
-				// Determine group size (1-3 enemies)
-				const groupSize = Math.min(
-					1 + Math.floor(Math.random() * 3),
-					this.maxEnemies - this.enemies.length,
-				);
-
-				// Spawn at a random position 10-15 units away from player
-				const playerPos = this.player.getPosition();
-				const angle = Math.random() * Math.PI * 2;
-				const distance = 10 + Math.random() * 5;
-				const spawnX = playerPos[0] + Math.cos(angle) * distance;
-				const spawnZ = playerPos[2] + Math.sin(angle) * distance;
-
-				this.spawnEnemyGroup(this.cachedAtlas, spawnX, spawnZ, groupSize);
-				console.log(`Spawned ${groupSize} enemies at distance ${distance.toFixed(1)}`);
-			}
+		if (this.gameState === GameState.PLAYING && this.spawnManager) {
+			this.spawnManager.updateEnemySpawning(
+				deltaTime,
+				this.cachedAtlas,
+				this.player,
+				this.entities,
+				this.enemies,
+			);
 		}
+	}
+
+	/**
+	 * Clean up resources when the game is destroyed
+	 */
+	destroy(): void {
+		// Clean up input event listeners
+		this.inputSource.destroy();
+
+		// Clean up window resize listener
+		window.removeEventListener("resize", this.resize.bind(this));
+
+		// Note: Physics colliders are automatically cleared when creating a new Physics instance in initScene
+		// WebGL resources (shaders, buffers, textures) are tied to the GL context and will be cleaned up
+		// when the context is lost or the canvas is removed
 	}
 }
 

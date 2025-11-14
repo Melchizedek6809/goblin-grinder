@@ -9,6 +9,7 @@ uniform mat4 u_model;
 uniform mat4 u_view;
 uniform mat4 u_projection;
 uniform mat4 u_lightSpaceMatrices[4];
+uniform int u_numLights;
 
 out vec3 v_color;
 out vec3 v_normal;
@@ -23,9 +24,19 @@ void main() {
     v_color = a_color;
     v_uv = a_uv;
 
-    // Calculate light space positions for each light
-    for (int i = 0; i < 4; i++) {
-        v_lightSpacePositions[i] = u_lightSpaceMatrices[i] * worldPosition;
+    // Calculate light space positions only for active lights
+    // Manually unrolled to allow skipping unused lights
+    if (u_numLights > 0) {
+        v_lightSpacePositions[0] = u_lightSpaceMatrices[0] * worldPosition;
+    }
+    if (u_numLights > 1) {
+        v_lightSpacePositions[1] = u_lightSpaceMatrices[1] * worldPosition;
+    }
+    if (u_numLights > 2) {
+        v_lightSpacePositions[2] = u_lightSpaceMatrices[2] * worldPosition;
+    }
+    if (u_numLights > 3) {
+        v_lightSpacePositions[3] = u_lightSpaceMatrices[3] * worldPosition;
     }
 
     gl_Position = u_projection * u_view * worldPosition;

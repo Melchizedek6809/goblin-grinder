@@ -130,11 +130,9 @@ export class Shader {
 	}
 
 	setUniformMatrix4fvArray(name: string, values: mat4[]): void {
+		// Cache each array element location using the existing caching mechanism
 		for (let i = 0; i < values.length; i++) {
-			const location = this.gl.getUniformLocation(
-				this.program,
-				`${name}[${i}]`,
-			);
+			const location = this.getUniformLocation(`${name}[${i}]`);
 			if (location) {
 				this.gl.uniformMatrix4fv(location, false, values[i] as Float32Array);
 			}
@@ -142,11 +140,9 @@ export class Shader {
 	}
 
 	setUniform3fvArray(name: string, values: vec3[]): void {
+		// Cache each array element location using the existing caching mechanism
 		for (let i = 0; i < values.length; i++) {
-			const location = this.gl.getUniformLocation(
-				this.program,
-				`${name}[${i}]`,
-			);
+			const location = this.getUniformLocation(`${name}[${i}]`);
 			if (location) {
 				this.gl.uniform3fv(location, values[i] as Float32Array);
 			}
