@@ -51,6 +51,8 @@ export class MainMenu extends LitElement {
 			cursor: pointer;
 			transition: all 0.2s;
 			text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+			touch-action: manipulation;
+			-webkit-tap-highlight-color: rgba(255, 255, 255, 0.1);
 		}
 
 		.button:hover {
@@ -65,7 +67,9 @@ export class MainMenu extends LitElement {
 		}
 	`;
 
-	private handleStartGame() {
+	private handleStartGame(e: Event) {
+		// Prevent default to avoid double-firing on mobile
+		e.preventDefault();
 		this.dispatchEvent(new CustomEvent("start-game", { bubbles: true, composed: true }));
 	}
 
@@ -77,7 +81,11 @@ export class MainMenu extends LitElement {
 		return html`
 			<div class="overlay">
 				<div class="title">GOBLIN GRINDER</div>
-				<button class="button" @click=${this.handleStartGame}>Start Game</button>
+				<button
+					class="button"
+					@click=${this.handleStartGame}
+					@touchend=${this.handleStartGame}
+				>Start Game</button>
 			</div>
 		`;
 	}

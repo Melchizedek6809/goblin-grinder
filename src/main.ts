@@ -31,7 +31,6 @@ import { ParticleSystem } from "./ParticleSystem.ts";
 import type { Projectile } from "./Projectile.ts";
 import type { Explosion } from "./Explosion.ts";
 import { FireballWeapon } from "./weapons/FireballWeapon.ts";
-import { MobileDebug } from "./MobileDebug.ts";
 
 // Import UI components
 import type { HealthDisplay } from "./components/health-display.ts";
@@ -104,15 +103,6 @@ export class Game {
 	private cachedAtlas: MeshAtlas | null = null;
 
 	constructor(rootElement: HTMLElement) {
-		// Enable mobile debug overlay (shows console on screen)
-		// Check URL parameter: ?debug=1 or if on mobile device
-		const urlParams = new URLSearchParams(window.location.search);
-		const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-		if (urlParams.get("debug") === "1" || isMobile) {
-			new MobileDebug();
-			console.log("Mobile debug enabled");
-		}
-
 		this.rootElement = rootElement;
 		const canvas = document.createElement("canvas");
 		this.canvasElement = canvas;
@@ -156,7 +146,6 @@ export class Game {
 			if (e.key === "F3") {
 				e.preventDefault();
 				this.debugMode = !this.debugMode;
-				console.log(`Debug mode: ${this.debugMode ? "ON" : "OFF"}`);
 			}
 		});
 
@@ -196,13 +185,10 @@ export class Game {
 	 * Initialize or reset the game scene
 	 */
 	private async initScene() {
-		console.log("initScene: Starting");
 		if (!this.gl) {
-			console.error("initScene: WebGL2 context is null");
 			throw new Error("WebGL2 not supported");
 		}
 
-		console.log("initScene: WebGL2 context exists");
 		const gl = this.gl;
 
 		// Clear existing game state
@@ -280,24 +266,17 @@ export class Game {
 		this.entities.push(ground);
 
 		// Load or reuse cached atlas
-		console.log("initScene: Loading atlas");
 		let atlas: MeshAtlas;
 		if (this.cachedAtlas) {
-			console.log("initScene: Using cached atlas");
 			atlas = this.cachedAtlas;
 		} else {
-			console.log("initScene: Creating new atlas");
 			atlas = new MeshAtlas();
-			console.log("initScene: Calling atlas.init()");
 			await atlas.init(gl);
-			console.log("initScene: Atlas initialized");
 			this.cachedAtlas = atlas;
 		}
 
-		console.log("initScene: Creating player");
 		// Create player from atlas
 		this.player = new Player(atlas.mage);
-		console.log("initScene: Player created");
 		this.entities.push(...this.player.entities);
 
 		// Add collider to player (layer 0 = player, collide with everything except player layer)
@@ -346,8 +325,6 @@ export class Game {
 			maxScale: 1.3,
 			// No collider - bushes are passable
 		}, this.entities);
-
-		console.log("initScene: Completed successfully");
 	}
 
 	/**
@@ -355,12 +332,9 @@ export class Game {
 	 */
 	private async startGame() {
 		try {
-			console.log("Starting game...");
 			await this.initScene();
-			console.log("Scene initialized, changing to PLAYING state");
 			this.gameState = GameState.PLAYING;
 			this.updateUIVisibility();
-			console.log("Game started successfully");
 		} catch (error) {
 			console.error("Failed to start game:", error);
 			alert(`Failed to start game: ${error instanceof Error ? error.message : String(error)}`);
@@ -614,7 +588,6 @@ export class Game {
 
 					// Smaller collision radius: enemy (0.25) + projectile (0.2) = 0.45
 					if (distXZ < 0.5) {
-						console.log(`Projectile hit enemy at distance ${distXZ.toFixed(2)}`);
 						const shouldDestroy = projectile.onHit(enemy);
 						if (shouldDestroy) {
 							projectile.destroy();

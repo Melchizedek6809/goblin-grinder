@@ -55,20 +55,13 @@ export class MeshAtlas {
 	 * Call this once during initialization.
 	 */
 	async init(gl: WebGL2RenderingContext): Promise<void> {
-		console.log("MeshAtlas.init: Starting asset loading");
-
 		// Load player model (multiple meshes)
-		console.log("MeshAtlas.init: Loading mage");
 		this.mage = await Mesh.allFromUrl(gl, mageGlbUrl, magePngUrl);
-		console.log("MeshAtlas.init: Mage loaded");
 
 		// Load enemy models (multiple meshes)
-		console.log("MeshAtlas.init: Loading skeleton");
 		this.skeleton = await Mesh.allFromUrl(gl, skeletonGlbUrl, skeletonPngUrl);
-		console.log("MeshAtlas.init: Skeleton loaded");
 
 		// Load tree, rock, and bush models (all share the same Nature.png texture)
-		console.log("MeshAtlas.init: Loading environment assets");
 		const [
 			tree3A,
 			tree3B,
@@ -100,8 +93,6 @@ export class MeshAtlas {
 		]);
 
 		this.tree3A = tree3A;
-		console.log("MeshAtlas.init: Environment assets loaded, assigning to properties");
-
 		this.tree3B = tree3B;
 		this.tree3C = tree3C;
 		this.tree4A = tree4A;
@@ -114,8 +105,6 @@ export class MeshAtlas {
 		this.bush2D = bush2D;
 		this.bush2E = bush2E;
 		this.bush2F = bush2F;
-
-		console.log("MeshAtlas.init: All assets loaded successfully");
 	}
 
 	/**
