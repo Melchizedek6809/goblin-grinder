@@ -1,6 +1,10 @@
 # Goblin Grinder
 
-A WebGL2-based 3D game experiment built with TypeScript and Vite, featuring custom rendering with shadow mapping and a pixel art aesthetic.
+A Vampire Survivors clone for the web, meant to experiment with rendering techniques as well as practicing juicing a game properly.
+
+The fantastic 3D Assets were made by [Kay Lousberg](https://kaylousberg.itch.io/) and are freely available.
+
+[Play the game in your browser](https://melchizedek6809.github.io/goblin-grinder/)
 
 ## Features
 
