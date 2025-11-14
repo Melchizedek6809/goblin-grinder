@@ -18,7 +18,6 @@ export class Coin extends Pickup {
 	private spawnAnimationDuration: number = 0.8; // 0.8 seconds for spawn animation
 	private spawnJumpHeight: number = 1.0; // How high to jump
 	private targetScale: number = 0.5; // Final scale after animation
-	private baseY: number = 0.3; // Base Y position (matches Pickup's baseY)
 
 	constructor(
 		meshAtlas: MeshAtlas,

@@ -11,7 +11,7 @@ export abstract class Pickup extends Entity {
 	private velocityX: number = 0; // Horizontal velocity (X)
 	private velocityZ: number = 0; // Horizontal velocity (Z)
 	private animationTime: number = 0;
-	private baseY: number = 0.3; // Base Y position for bobbing animation
+	protected baseY: number = 0.3; // Base Y position for bobbing animation
 	private bobbingSpeed: number = 2.0; // Speed of bobbing animation
 	private bobbingHeight: number = 0.15; // Height of bobbing animation
 	private rotationSpeed: number = 90.0; // Degrees per second
