@@ -15,6 +15,7 @@ export class MainMenu extends LitElement {
 			width: 100%;
 			height: 100%;
 			pointer-events: none;
+			font-family: "Space Mono", "Fira Code", monospace;
 		}
 
 		:host([visible]) {
@@ -24,20 +25,115 @@ export class MainMenu extends LitElement {
 		.overlay {
 			width: 100%;
 			height: 100%;
-			background-color: rgba(0, 0, 0, 0.8);
+			position: relative;
 			display: flex;
 			flex-direction: column;
 			align-items: center;
 			justify-content: center;
 			gap: 30px;
+			background: radial-gradient(
+					circle at top,
+					rgba(44, 255, 201, 0.15),
+					transparent 45%
+				),
+				radial-gradient(
+					circle at bottom,
+					rgba(255, 115, 137, 0.16),
+					transparent 40%
+				),
+				linear-gradient(135deg, rgba(9, 9, 9, 0.95), rgba(10, 5, 20, 0.95));
+			overflow: hidden;
+		}
+
+		.overlay::after {
+			content: "";
+			position: absolute;
+			inset: 0;
+			background-image: url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 60h120M60 0v120' stroke='rgba(255,255,255,0.025)' stroke-width='1'/%3E%3C/svg%3E");
+			opacity: 0.6;
+			mix-blend-mode: screen;
+			pointer-events: none;
+		}
+
+		.panel {
+			position: relative;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 18px;
+			padding: 48px 56px;
+			background: rgba(12, 9, 18, 0.75);
+			border: 1px solid rgba(255, 255, 255, 0.12);
+			border-radius: 24px;
+			box-shadow:
+				0 25px 60px rgba(0, 0, 0, 0.7),
+				0 0 40px rgba(0, 255, 153, 0.08);
+			backdrop-filter: blur(18px);
+			text-align: center;
+			max-width: 520px;
+			width: calc(100% - 40px);
 		}
 
 		.title {
-			font-family: monospace;
 			font-size: 48px;
 			color: #ffffff;
-			text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.9);
 			margin-bottom: 20px;
+			text-transform: uppercase;
+			letter-spacing: 6px;
+			text-shadow:
+				0 0 12px rgba(0, 255, 153, 0.4),
+				0 0 20px rgba(255, 71, 120, 0.35);
+		}
+
+		.emblem {
+			width: 72px;
+			height: 72px;
+			border-radius: 50%;
+			background: radial-gradient(circle, #1fdfb4 0%, #14a570 45%, #0b4535 100%);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			color: #06110f;
+			font-size: 32px;
+			box-shadow:
+				inset 0 4px 12px rgba(255, 255, 255, 0.3),
+				0 18px 30px rgba(0, 0, 0, 0.55);
+			position: relative;
+		}
+
+		.emblem::after {
+			content: "";
+			position: absolute;
+			inset: -12px;
+			border-radius: 50%;
+			border: 1px dashed rgba(31, 223, 180, 0.3);
+			animation: pulse 6s linear infinite;
+		}
+
+		@keyframes pulse {
+			0% {
+				transform: scale(0.9);
+				opacity: 0.5;
+			}
+			50% {
+				transform: scale(1.1);
+				opacity: 1;
+			}
+			100% {
+				transform: scale(0.9);
+				opacity: 0.5;
+			}
+		}
+
+		.divider {
+			width: 100%;
+			height: 1px;
+			background: linear-gradient(
+				90deg,
+				transparent,
+				rgba(255, 255, 255, 0.4),
+				transparent
+			);
 		}
 
 		@media (max-width: 650px) {
@@ -65,35 +161,75 @@ export class MainMenu extends LitElement {
 		}
 
 		.button {
-			font-family: monospace;
 			font-size: 24px;
 			padding: 12px 32px;
-			background-color: #4a4a4a;
+			background: linear-gradient(135deg, #19d49d, #13a77a);
 			color: #ffffff;
-			border: 2px solid #666666;
-			border-radius: 4px;
+			border: none;
+			border-radius: 999px;
 			cursor: pointer;
-			transition: all 0.2s;
-			text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+			transition: transform 0.2s, box-shadow 0.2s;
+			font-weight: 700;
 			touch-action: manipulation;
 			-webkit-tap-highlight-color: rgba(255, 255, 255, 0.1);
+			min-width: 220px;
+			box-shadow:
+				0 12px 30px rgba(0, 0, 0, 0.5),
+				0 0 18px rgba(25, 212, 157, 0.55);
 		}
 
 		.button:hover {
-			background-color: #5a5a5a;
-			border-color: #888888;
-			transform: translateY(-2px);
+			transform: translateY(-3px) scale(1.02);
+			box-shadow:
+				0 18px 40px rgba(0, 0, 0, 0.4),
+				0 0 26px rgba(25, 212, 157, 0.7);
 		}
 
 		.button:active {
-			background-color: #3a3a3a;
-			transform: translateY(0);
+			transform: translateY(-1px);
+		}
+
+		.hints {
+			display: grid;
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			gap: 16px 24px;
+			width: 100%;
+			text-align: left;
+		}
+
+		.hint {
+			color: rgba(255, 255, 255, 0.85);
+			font-size: 15px;
+			display: flex;
+			flex-direction: column;
+			gap: 4px;
+		}
+
+		.hint-label {
+			font-size: 12px;
+			text-transform: uppercase;
+			letter-spacing: 2px;
+			color: rgba(255, 255, 255, 0.45);
+		}
+
+		@media (max-width: 560px) {
+			.panel {
+				padding: 36px 28px;
+			}
+
+			.hints {
+				grid-template-columns: 1fr;
+			}
+		}
+
+		@media (max-width: 840px) and (min-width: 561px) {
+			.hints {
+				grid-template-columns: repeat(2, minmax(0, 1fr));
+			}
 		}
 	`;
 
-	private handleStartGame(e: Event) {
-		// Prevent default to avoid double-firing on mobile
-		e.preventDefault();
+	private handleStartGame() {
 		this.dispatchEvent(
 			new CustomEvent("start-game", { bubbles: true, composed: true }),
 		);
@@ -106,12 +242,31 @@ export class MainMenu extends LitElement {
 
 		return html`
 			<div class="overlay">
-				<div class="title">🪓 Goblin Grinder 🗡️</div>
-				<button
-					class="button"
-					@click=${this.handleStartGame}
-					@touchend=${this.handleStartGame}
-				>⚡ Start Game</button>
+				<div class="panel">
+					<div class="emblem">⚔️</div>
+					<div class="title">Goblin Grinder</div>
+					<div class="divider"></div>
+					<div class="hints">
+						<div class="hint">
+							<span class="hint-label">move</span>
+							<span>WASD / Click or Touch</span>
+						</div>
+						<div class="hint">
+							<span class="hint-label">rotate</span>
+							<span>QE / Wheel or Swipe</span>
+						</div>
+						<div class="hint">
+							<span class="hint-label">objective</span>
+							<span>SURVIVE</span>
+						</div>
+					</div>
+					<div class="divider"></div>
+					<button
+						class="button"
+						type="button"
+						@click=${this.handleStartGame}
+					>Start Game</button>
+				</div>
 			</div>
 		`;
 	}
