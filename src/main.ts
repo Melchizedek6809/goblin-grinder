@@ -63,7 +63,7 @@ export class Game {
 	private noiseTexture: NoiseTexture | null = null;
 	private cloudOffset: number = 0;
 	public entities: Renderable[] = [];
-	private lights: Light[] = [];
+	private light: Light | null = null;
 	public player: Player | null = null;
 	private enemies: Enemy[] = [];
 	public pickups: Pickup[] = [];
@@ -192,7 +192,7 @@ export class Game {
 
 		// Clear existing game state
 		this.entities = [];
-		this.lights = [];
+		this.light = null;
 		this.enemies = [];
 		this.pickups = [];
 		this.projectiles = [];
@@ -249,15 +249,14 @@ export class Game {
 		if (!this.depthShader) {
 			throw new Error("Depth shader not initialized");
 		}
-		const mainLight = new Light(
+		this.light = new Light(
 			gl,
 			this.depthShader,
 			vec3.fromValues(2.93, 12, 10.93),
 			vec3.fromValues(0, 0, 0),
 			vec3.fromValues(1.0, 1.0, 0.95),
 		);
-		mainLight.orthoSize = 15;
-		this.lights.push(mainLight);
+		this.light.orthoSize = 15;
 
 		// Create ground plane
 		const planeMesh = Mesh.createPlane(gl);
@@ -487,18 +486,18 @@ export class Game {
 		gl.clearColor(0.1, 0.1, 0.15, 1);
 		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-		// Update lights to follow player
-		if (this.player && this.lights.length > 0) {
+		// Update light to follow player
+		if (this.player && this.light) {
 			const playerPos = this.player.getPosition();
 			// Keep the same relative offset (rotated 30 degrees around Y axis)
-			this.lights[0].followTarget(playerPos, 2.93, 12, 10.93);
+			this.light.followTarget(playerPos, 2.93, 12, 10.93);
 		}
 
 		// Draw the scene (pass time and noise texture for cloud shadows)
 		if (this.noiseTexture) {
 			this.camera.draw(
 				this.entities,
-				this.lights,
+				this.light,
 				timestamp / 1000 + this.cloudOffset,
 				this.noiseTexture.texture,
 			);

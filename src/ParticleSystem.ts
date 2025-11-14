@@ -83,6 +83,7 @@ export class ParticleSystem {
 		lifetimeRange: [number, number],
 		colors: vec3[],
 		gravity = 0.0,
+		blendMode: "alpha" | "additive" = "alpha",
 	): void {
 		for (let i = 0; i < count; i++) {
 			const color = colors[Math.floor(Math.random() * colors.length)];
@@ -104,7 +105,17 @@ export class ParticleSystem {
 				Math.random() * (lifetimeRange[1] - lifetimeRange[0]);
 
 			this.spawn(
-				new Particle(position, velocity, color, size, lifetime, gravity),
+				new Particle(
+					position,
+					velocity,
+					color,
+					size,
+					lifetime,
+					gravity,
+					undefined,
+					undefined,
+					blendMode,
+				),
 			);
 		}
 	}
@@ -121,9 +132,45 @@ export class ParticleSystem {
 
 		const gl = this.gl;
 
-		// Update buffers with current particle data
-		for (let i = 0; i < this.particles.length; i++) {
-			const particle = this.particles[i];
+		// Separate particles by blend mode
+		const alphaParticles: Particle[] = [];
+		const additiveParticles: Particle[] = [];
+
+		for (const particle of this.particles) {
+			if (particle.blendMode === "additive") {
+				additiveParticles.push(particle);
+			} else {
+				alphaParticles.push(particle);
+			}
+		}
+
+		// Set up shader uniforms (shared for both batches)
+		this.shader.use();
+		this.shader.setUniformMatrix4fv("u_view", viewMatrix);
+		this.shader.setUniformMatrix4fv("u_projection", projectionMatrix);
+		gl.bindVertexArray(this.vao);
+
+		// Render alpha-blended particles first
+		if (alphaParticles.length > 0) {
+			gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+			this.renderBatch(alphaParticles);
+		}
+
+		// Render additive particles second (brighter on top)
+		if (additiveParticles.length > 0) {
+			gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+			this.renderBatch(additiveParticles);
+		}
+
+		gl.bindVertexArray(null);
+	}
+
+	private renderBatch(particles: Particle[]): void {
+		const gl = this.gl;
+
+		// Update buffers with particle data
+		for (let i = 0; i < particles.length; i++) {
+			const particle = particles[i];
 			const posIdx = i * 3;
 			const colorIdx = i * 4;
 
@@ -149,14 +196,8 @@ export class ParticleSystem {
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.sizeBuffer);
 		gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.sizes);
 
-		// Render
-		this.shader.use();
-		this.shader.setUniformMatrix4fv("u_view", viewMatrix);
-		this.shader.setUniformMatrix4fv("u_projection", projectionMatrix);
-
-		gl.bindVertexArray(this.vao);
-		gl.drawArraysInstanced(gl.POINTS, 0, 1, this.particles.length);
-		gl.bindVertexArray(null);
+		// Draw this batch
+		gl.drawArraysInstanced(gl.POINTS, 0, 1, particles.length);
 	}
 
 	clear(): void {

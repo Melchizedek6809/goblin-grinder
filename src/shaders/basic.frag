@@ -6,12 +6,11 @@ in vec3 v_color;
 in vec3 v_normal;
 in vec3 v_worldPosition;
 in vec2 v_uv;
-in vec4 v_lightSpacePositions[4];
+in vec4 v_lightSpacePosition;
 
-uniform sampler2D u_shadowMaps[4];
-uniform vec3 u_lightPositions[4];
-uniform vec3 u_lightColors[4];
-uniform int u_numLights;
+uniform sampler2D u_shadowMap;
+uniform vec3 u_lightPosition;
+uniform vec3 u_lightColor;
 
 uniform sampler2D u_texture;
 uniform bool u_useTexture;
@@ -32,7 +31,7 @@ float cloudShadow(vec2 worldPos, float time) {
     return smoothstep(0.42, 0.58, cloudPattern);
 }
 
-float calculateShadow(vec4 lightSpacePos, int lightIndex) {
+float calculateShadow(vec4 lightSpacePos) {
     // Perspective divide
     vec3 projCoords = lightSpacePos.xyz / lightSpacePos.w;
 
@@ -64,14 +63,7 @@ float calculateShadow(vec4 lightSpacePos, int lightIndex) {
 
     for(int i = 0; i < 5; i++) {
         vec2 offset = offsets[i] * texelSize;
-        float closestDepth = 0.0;
-
-        // Sample shadow map - must use constant index
-        if (lightIndex == 0) closestDepth = texture(u_shadowMaps[0], projCoords.xy + offset).r;
-        else if (lightIndex == 1) closestDepth = texture(u_shadowMaps[1], projCoords.xy + offset).r;
-        else if (lightIndex == 2) closestDepth = texture(u_shadowMaps[2], projCoords.xy + offset).r;
-        else if (lightIndex == 3) closestDepth = texture(u_shadowMaps[3], projCoords.xy + offset).r;
-
+        float closestDepth = texture(u_shadowMap, projCoords.xy + offset).r;
         shadow += currentDepth - bias > closestDepth ? 1.0 : 0.0;
     }
 
@@ -93,34 +85,11 @@ void main() {
     float ambient = 0.2;
     vec3 finalColor = color * ambient;
 
-    // Calculate contribution from each light (unrolled to allow constant sampler indexing)
-    if (u_numLights > 0) {
-        vec3 lightDir = normalize(u_lightPositions[0] - v_worldPosition);
-        float diffuse = max(dot(normal, lightDir), 0.0);
-        float shadow = calculateShadow(v_lightSpacePositions[0], 0);
-        finalColor += color * u_lightColors[0] * diffuse * (1.0 - shadow * 0.8);
-    }
-
-    if (u_numLights > 1) {
-        vec3 lightDir = normalize(u_lightPositions[1] - v_worldPosition);
-        float diffuse = max(dot(normal, lightDir), 0.0);
-        float shadow = calculateShadow(v_lightSpacePositions[1], 1);
-        finalColor += color * u_lightColors[1] * diffuse * (1.0 - shadow * 0.8);
-    }
-
-    if (u_numLights > 2) {
-        vec3 lightDir = normalize(u_lightPositions[2] - v_worldPosition);
-        float diffuse = max(dot(normal, lightDir), 0.0);
-        float shadow = calculateShadow(v_lightSpacePositions[2], 2);
-        finalColor += color * u_lightColors[2] * diffuse * (1.0 - shadow * 0.8);
-    }
-
-    if (u_numLights > 3) {
-        vec3 lightDir = normalize(u_lightPositions[3] - v_worldPosition);
-        float diffuse = max(dot(normal, lightDir), 0.0);
-        float shadow = calculateShadow(v_lightSpacePositions[3], 3);
-        finalColor += color * u_lightColors[3] * diffuse * (1.0 - shadow * 0.8);
-    }
+    // Calculate lighting from single light source
+    vec3 lightDir = normalize(u_lightPosition - v_worldPosition);
+    float diffuse = max(dot(normal, lightDir), 0.0);
+    float shadow = calculateShadow(v_lightSpacePosition);
+    finalColor += color * u_lightColor * diffuse * (1.0 - shadow * 0.8);
 
     // Apply cloud shadows (darken areas under clouds)
     finalColor *= mix(0.5, 1.0, cloudShade);

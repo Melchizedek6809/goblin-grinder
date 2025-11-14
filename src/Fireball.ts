@@ -105,6 +105,9 @@ export class Fireball extends Projectile {
 						18.0 + Math.random() * 8.0, // size 15-25
 						0.2 + Math.random() * 0.2, // lifetime 0.3-0.5s
 						2.0, // slight gravity
+						undefined, // no end color
+						undefined, // no end size
+						"additive", // additive blending for fire
 					),
 				);
 			}

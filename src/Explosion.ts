@@ -75,6 +75,7 @@ export class Explosion {
 			[0.2, 0.4], // lifetime range
 			colors,
 			-12.0, // gravity
+			"additive", // additive blending for explosions
 		);
 	}
 }

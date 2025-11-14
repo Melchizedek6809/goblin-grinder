@@ -189,15 +189,15 @@ export class Camera {
 
 	draw(
 		entities: Renderable[],
-		lights: Light[] = [],
+		light: Light | null = null,
 		time: number = 0,
 		noiseTexture: WebGLTexture | null = null,
 	) {
 		const gl = this.gl;
 		const aspectRatio = gl.canvas.width / gl.canvas.height;
 
-		// First pass: Render shadow maps for each light
-		for (const light of lights) {
+		// First pass: Render shadow map for the light
+		if (light) {
 			light.renderShadowMap(entities);
 		}
 
@@ -221,30 +221,18 @@ export class Camera {
 		}
 
 		// Set light uniforms
-		this.shader.setUniform1i("u_numLights", lights.length);
-
-		if (lights.length > 0) {
-			const lightSpaceMatrices: mat4[] = [];
-			const lightPositions: vec3[] = [];
-			const lightColors: vec3[] = [];
-
-			for (let i = 0; i < Math.min(lights.length, 4); i++) {
-				lightSpaceMatrices.push(lights[i].getLightSpaceMatrix());
-				lightPositions.push(lights[i].position);
-				lightColors.push(lights[i].color);
-
-				// Bind shadow map textures
-				gl.activeTexture(gl.TEXTURE0 + i);
-				gl.bindTexture(gl.TEXTURE_2D, lights[i].shadowTexture);
-				this.shader.setUniform1i(`u_shadowMaps[${i}]`, i);
-			}
-
-			this.shader.setUniformMatrix4fvArray(
-				"u_lightSpaceMatrices",
-				lightSpaceMatrices,
+		if (light) {
+			this.shader.setUniformMatrix4fv(
+				"u_lightSpaceMatrix",
+				light.getLightSpaceMatrix(),
 			);
-			this.shader.setUniform3fvArray("u_lightPositions", lightPositions);
-			this.shader.setUniform3fvArray("u_lightColors", lightColors);
+			this.shader.setUniform3fv("u_lightPosition", light.position);
+			this.shader.setUniform3fv("u_lightColor", light.color);
+
+			// Bind shadow map texture
+			gl.activeTexture(gl.TEXTURE0);
+			gl.bindTexture(gl.TEXTURE_2D, light.shadowTexture);
+			this.shader.setUniform1i("u_shadowMap", 0);
 		}
 
 		// Draw each entity

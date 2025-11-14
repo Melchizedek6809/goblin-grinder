@@ -1,5 +1,7 @@
 import { vec3 } from "gl-matrix";
 
+export type BlendMode = "alpha" | "additive";
+
 export class Particle {
 	position: vec3;
 	velocity: vec3;
@@ -8,6 +10,7 @@ export class Particle {
 	lifetime: number;
 	maxLifetime: number;
 	gravity: number;
+	blendMode: BlendMode;
 
 	// Optional color/size interpolation
 	private startColor: vec3;
@@ -24,6 +27,7 @@ export class Particle {
 		gravity = 0.0,
 		endColor?: vec3,
 		endSize?: number,
+		blendMode: BlendMode = "alpha",
 	) {
 		this.position = vec3.clone(position);
 		this.velocity = vec3.clone(velocity);
@@ -36,6 +40,7 @@ export class Particle {
 		this.lifetime = lifetime;
 		this.maxLifetime = lifetime;
 		this.gravity = gravity;
+		this.blendMode = blendMode;
 	}
 
 	update(deltaTime: number): boolean {

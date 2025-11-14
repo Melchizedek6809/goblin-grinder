@@ -121,6 +121,7 @@ export class Coin extends Pickup {
 						0.0, // No gravity for sparkles
 						endColor,
 						1.0, // End size (shrink)
+						"additive", // Additive blending for glow
 					);
 
 					game.particleSystem.spawn(particle);
@@ -182,6 +183,7 @@ export class Coin extends Pickup {
 					0.0, // No gravity
 					endColor,
 					2.0, // End size (shrink)
+					"additive", // Additive blending for glow
 				);
 
 				game.particleSystem.spawn(particle);
