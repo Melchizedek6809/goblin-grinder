@@ -12,6 +12,8 @@ export class Fireball extends Projectile {
 	private explosionRadius: number;
 	private explosionDamage: number;
 	private particleSpawnTimer = 0;
+	private wiggleTime = 0;
+	private wiggleOffset = vec3.create();
 
 	constructor(
 		position: vec3,
@@ -64,6 +66,13 @@ export class Fireball extends Projectile {
 	render(deltaTime: number): void {
 		if (!this.isAlive) return;
 
+		// Update wiggle effect for smooth random movement
+		this.wiggleTime += deltaTime;
+		const wiggleAmount = 0.2; // How much the fireball wiggles
+		this.wiggleOffset[0] = Math.sin(this.wiggleTime * 5.3) * wiggleAmount;
+		this.wiggleOffset[1] = Math.sin(this.wiggleTime * 6.7) * wiggleAmount;
+		this.wiggleOffset[2] = Math.cos(this.wiggleTime * 4.9) * wiggleAmount;
+
 		// Spawn particles continuously to create a cluster effect
 		this.particleSpawnTimer += deltaTime;
 		if (this.particleSpawnTimer >= 0.016) {
@@ -89,6 +98,7 @@ export class Fireball extends Projectile {
 				);
 				const particlePos = vec3.create();
 				vec3.add(particlePos, this.position, offset);
+				vec3.add(particlePos, particlePos, this.wiggleOffset);
 
 				// Small random velocity (particles trail behind)
 				const particleVel = vec3.fromValues(
@@ -122,6 +132,7 @@ export class Fireball extends Projectile {
 				);
 				const particlePos = vec3.create();
 				vec3.add(particlePos, this.position, offset);
+				vec3.add(particlePos, particlePos, this.wiggleOffset);
 
 				// Slow upward velocity with slight random drift
 				const particleVel = vec3.fromValues(
