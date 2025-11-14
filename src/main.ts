@@ -31,6 +31,7 @@ import { ParticleSystem } from "./ParticleSystem.ts";
 import type { Projectile } from "./Projectile.ts";
 import type { Explosion } from "./Explosion.ts";
 import { FireballWeapon } from "./weapons/FireballWeapon.ts";
+import { MobileDebug } from "./MobileDebug.ts";
 
 // Import UI components
 import type { HealthDisplay } from "./components/health-display.ts";
@@ -103,6 +104,15 @@ export class Game {
 	private cachedAtlas: MeshAtlas | null = null;
 
 	constructor(rootElement: HTMLElement) {
+		// Enable mobile debug overlay (shows console on screen)
+		// Check URL parameter: ?debug=1 or if on mobile device
+		const urlParams = new URLSearchParams(window.location.search);
+		const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+		if (urlParams.get("debug") === "1" || isMobile) {
+			new MobileDebug();
+			console.log("Mobile debug enabled");
+		}
+
 		this.rootElement = rootElement;
 		const canvas = document.createElement("canvas");
 		this.canvasElement = canvas;
