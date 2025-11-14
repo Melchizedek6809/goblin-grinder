@@ -76,34 +76,38 @@ export class Fireball extends Projectile {
 				vec3.fromValues(1.0, 0.5, 0.1), // Orange
 				vec3.fromValues(1.0, 0.8, 0.2), // Yellow-orange
 			];
-			const color = colors[Math.floor(Math.random() * colors.length)];
 
-			// Spawn particles with slight random offset for cluster effect
-			const offset = vec3.fromValues(
-				(Math.random() - 0.5) * 0.2,
-				(Math.random() - 0.5) * 0.2,
-				(Math.random() - 0.5) * 0.2,
-			);
-			const particlePos = vec3.create();
-			vec3.add(particlePos, this.position, offset);
+			// Spawn multiple particles per frame for a more intense effect
+			for (let i = 0; i < 4; i++) {
+				const color = colors[Math.floor(Math.random() * colors.length)];
 
-			// Small random velocity (particles trail behind)
-			const particleVel = vec3.fromValues(
-				(Math.random() - 0.5) * 0.5,
-				(Math.random() - 0.5) * 0.5,
-				(Math.random() - 0.5) * 0.5,
-			);
+				// Spawn particles with slight random offset for cluster effect
+				const offset = vec3.fromValues(
+					(Math.random() - 0.5) * 0.2,
+					(Math.random() - 0.5) * 0.2,
+					(Math.random() - 0.5) * 0.2,
+				);
+				const particlePos = vec3.create();
+				vec3.add(particlePos, this.position, offset);
 
-			this.particleSystem.spawn(
-				new Particle(
-					particlePos,
-					particleVel,
-					color,
-					15.0 + Math.random() * 10.0, // size 15-25
-					0.3 + Math.random() * 0.2, // lifetime 0.3-0.5s
-					2.0, // slight gravity
-				),
-			);
+				// Small random velocity (particles trail behind)
+				const particleVel = vec3.fromValues(
+					(Math.random() - 0.5) * 0.5,
+					(Math.random() - 0.5) * 0.5,
+					(Math.random() - 0.5) * 0.5,
+				);
+
+				this.particleSystem.spawn(
+					new Particle(
+						particlePos,
+						particleVel,
+						color,
+						15.0 + Math.random() * 10.0, // size 15-25
+						0.3 + Math.random() * 0.2, // lifetime 0.3-0.5s
+						2.0, // slight gravity
+					),
+				);
+			}
 		}
 	}
 }

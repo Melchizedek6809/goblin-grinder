@@ -191,7 +191,7 @@ export class Game {
 		if (enemy.entities.length > 0) {
 			const collider = createSphereCollider(
 				enemy.position,
-				0.35, // radius
+				0.25, // radius
 				1, // layer 1 = enemy
 				0xffffffff, // collide with all layers
 			);
@@ -638,10 +638,10 @@ export class Game {
 			for (const projectile of this.projectiles) {
 				projectile.update(this.fixedTimestep);
 
-				// Check collision with static objects (trees, rocks)
+				// Check collision with static objects (trees, rocks) - XZ plane only
 				const hitObstacle = this.physics.overlapSphere(
-					projectile.position,
-					0.3, // projectile collision radius
+					vec3.fromValues(projectile.position[0], -0.5, projectile.position[2]),
+					0.2, // smaller projectile collision radius
 					3, // projectile layer
 					0x00000004, // only collide with layer 2 (environment)
 				);
@@ -654,15 +654,18 @@ export class Game {
 					}
 				}
 
-				// Check collision with enemies
+				// Check collision with enemies - XZ plane only
 				for (const enemy of this.enemies) {
 					if (enemy.getState() === "death") continue; // Skip dead enemies
 
-					const dist = vec3.distance(projectile.position, enemy.getPosition());
-					// Collision radius: enemy collider (0.35) + projectile size (~0.5) = ~0.85, using 1.0 for safety
-					if (dist < 1.0) {
-						console.log(`Projectile hit enemy at distance ${dist.toFixed(2)}`);
-						// Hit! Let projectile handle it (returns true if should be destroyed)
+					// Calculate XZ distance only
+					const dx = projectile.position[0] - enemy.getPosition()[0];
+					const dz = projectile.position[2] - enemy.getPosition()[2];
+					const distXZ = Math.sqrt(dx * dx + dz * dz);
+
+					// Smaller collision radius: enemy (0.25) + projectile (0.2) = 0.45
+					if (distXZ < 0.5) {
+						console.log(`Projectile hit enemy at distance ${distXZ.toFixed(2)}`);
 						const shouldDestroy = projectile.onHit(enemy);
 						if (shouldDestroy) {
 							projectile.destroy();

@@ -148,18 +148,19 @@ export class Camera {
 
 	/**
 	 * Simple frustum culling - check if entity is within visible range
-	 * Uses distance from camera target in XZ plane (top-down view)
+	 * Uses distance from camera position (3D distance)
 	 */
 	isInFrustum(entityPosition: vec3): boolean {
-		// Calculate distance in XZ plane from camera target
-		const dx = entityPosition[0] - this.target[0];
-		const dz = entityPosition[2] - this.target[2];
-		const distanceXZ = Math.sqrt(dx * dx + dz * dz);
+		// Calculate 3D distance from camera position
+		const dx = entityPosition[0] - this.position[0];
+		const dy = entityPosition[1] - this.position[1];
+		const dz = entityPosition[2] - this.position[2];
+		const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
 		// Conservative culling radius (visible area + margin for large objects)
-		const cullRadius = 25; // Adjust based on your scene scale
+		const cullRadius = 30; // Adjust based on your scene scale
 
-		return distanceXZ < cullRadius;
+		return distance < cullRadius;
 	}
 
 	updateMatrices(aspectRatio: number) {
