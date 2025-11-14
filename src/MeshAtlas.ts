@@ -1,9 +1,16 @@
 import bush2DGlbUrl from "./assets/models/Bush2D.glb?url";
 import bush2EGlbUrl from "./assets/models/Bush2E.glb?url";
 import bush2FGlbUrl from "./assets/models/Bush2F.glb?url";
+import chestGlbUrl from "./assets/models/Chest.glb?url";
+import chestGoldGlbUrl from "./assets/models/ChestGold.glb?url";
+import coinGlbUrl from "./assets/models/Coin.glb?url";
+import coinStackLargeGlbUrl from "./assets/models/CoinStackLarge.glb?url";
+import coinStackMediumGlbUrl from "./assets/models/CoinStackMedium.glb?url";
+import coinStackSmallGlbUrl from "./assets/models/CoinStackSmall.glb?url";
 // Static imports for Vite bundling
 // Note: ?url suffix tells Vite to treat these as URL assets
 import mageGlbUrl from "./assets/models/Mage.glb?url";
+import dungeonPngUrl from "./assets/models/Dungeon.png";
 import magePngUrl from "./assets/models/Mage.png";
 import naturePngUrl from "./assets/models/Nature.png";
 import rock1AGlbUrl from "./assets/models/Rock1A.glb?url";
@@ -49,6 +56,14 @@ export class MeshAtlas {
 	public bush2D: Mesh | null = null;
 	public bush2E: Mesh | null = null;
 	public bush2F: Mesh | null = null;
+
+	// Pickup meshes (single mesh each)
+	public chest: Mesh | null = null;
+	public chestGold: Mesh | null = null;
+	public coin: Mesh | null = null;
+	public coinStackSmall: Mesh | null = null;
+	public coinStackMedium: Mesh | null = null;
+	public coinStackLarge: Mesh | null = null;
 
 	/**
 	 * Load all meshes from the atlas.
@@ -105,6 +120,30 @@ export class MeshAtlas {
 		this.bush2D = bush2D;
 		this.bush2E = bush2E;
 		this.bush2F = bush2F;
+
+		// Load pickup models (all share the same Dungeon.png texture)
+		const [
+			chest,
+			chestGold,
+			coin,
+			coinStackSmall,
+			coinStackMedium,
+			coinStackLarge,
+		] = await Promise.all([
+			Mesh.fromUrl(gl, chestGlbUrl, dungeonPngUrl),
+			Mesh.fromUrl(gl, chestGoldGlbUrl, dungeonPngUrl),
+			Mesh.fromUrl(gl, coinGlbUrl, dungeonPngUrl),
+			Mesh.fromUrl(gl, coinStackSmallGlbUrl, dungeonPngUrl),
+			Mesh.fromUrl(gl, coinStackMediumGlbUrl, dungeonPngUrl),
+			Mesh.fromUrl(gl, coinStackLargeGlbUrl, dungeonPngUrl),
+		]);
+
+		this.chest = chest;
+		this.chestGold = chestGold;
+		this.coin = coin;
+		this.coinStackSmall = coinStackSmall;
+		this.coinStackMedium = coinStackMedium;
+		this.coinStackLarge = coinStackLarge;
 	}
 
 	/**

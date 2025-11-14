@@ -1,15 +1,15 @@
 import { vec3 } from "gl-matrix";
 import { Camera } from "./Camera.ts";
-import type { FpsDisplay } from "./components/fps-display.ts";
+import { Coin } from "./Coin.ts";
 import type { GameOverScreen } from "./components/game-over-screen.ts";
 // Import UI components
-import type { HealthDisplay } from "./components/health-display.ts";
 import type { MainMenu } from "./components/main-menu.ts";
-import type { ScoreDisplay } from "./components/score-display.ts";
+import type { TopBar } from "./components/top-bar.ts";
 import { DebugRenderer } from "./DebugRenderer.ts";
 import type { Enemy } from "./Enemy.ts";
 import { Entity } from "./Entity.ts";
 import type { Explosion } from "./Explosion.ts";
+import type { Pickup } from "./Pickup.ts";
 import { CompositeInput } from "./input/CompositeInput.ts";
 import type { InputSource } from "./input/InputSource.ts";
 import { KeyboardInput } from "./input/KeyboardInput.ts";
@@ -37,9 +37,7 @@ import depthVertexShaderSource from "./shaders/depth.vert?raw";
 import particleFragmentShaderSource from "./shaders/particle.frag?raw";
 import particleVertexShaderSource from "./shaders/particle.vert?raw";
 import { FireballWeapon } from "./weapons/FireballWeapon.ts";
-import "./components/health-display.ts";
-import "./components/fps-display.ts";
-import "./components/score-display.ts";
+import "./components/top-bar.ts";
 import "./components/main-menu.ts";
 import "./components/game-over-screen.ts";
 
@@ -64,11 +62,12 @@ export class Game {
 	private camera: Camera | null = null;
 	private noiseTexture: NoiseTexture | null = null;
 	private cloudOffset: number = 0;
-	private entities: Renderable[] = [];
+	public entities: Renderable[] = [];
 	private lights: Light[] = [];
-	private player: Player | null = null;
+	public player: Player | null = null;
 	private enemies: Enemy[] = [];
-	private particleSystem: ParticleSystem | null = null;
+	public pickups: Pickup[] = [];
+	public particleSystem: ParticleSystem | null = null;
 	private projectiles: Projectile[] = [];
 	private explosions: Explosion[] = [];
 
@@ -84,9 +83,7 @@ export class Game {
 	private accumulator: number = 0;
 
 	// UI elements
-	private healthDisplay: HealthDisplay | null = null;
-	private fpsDisplay: FpsDisplay | null = null;
-	private scoreDisplay: ScoreDisplay | null = null;
+	private topBar: TopBar | null = null;
 	private mainMenu: MainMenu | null = null;
 	private gameOverScreen: GameOverScreen | null = null;
 
@@ -97,6 +94,7 @@ export class Game {
 	// Game state
 	private gameState: GameState = GameState.MENU;
 	private score: number = 0;
+	public coins: number = 0;
 
 	// Cache for loaded assets (to avoid reloading on restart)
 	private cachedAtlas: MeshAtlas | null = null;
@@ -109,15 +107,11 @@ export class Game {
 
 		// Get UI elements after custom elements are defined
 		Promise.all([
-			customElements.whenDefined("health-display"),
-			customElements.whenDefined("fps-display"),
-			customElements.whenDefined("score-display"),
+			customElements.whenDefined("top-bar"),
 			customElements.whenDefined("main-menu"),
 			customElements.whenDefined("game-over-screen"),
 		]).then(() => {
-			this.healthDisplay = document.querySelector("health-display");
-			this.fpsDisplay = document.querySelector("fps-display");
-			this.scoreDisplay = document.querySelector("score-display");
+			this.topBar = document.querySelector("top-bar");
 			this.mainMenu = document.querySelector("main-menu");
 			this.gameOverScreen = document.querySelector("game-over-screen");
 
@@ -200,11 +194,13 @@ export class Game {
 		this.entities = [];
 		this.lights = [];
 		this.enemies = [];
+		this.pickups = [];
 		this.projectiles = [];
 		this.explosions = [];
 		this.physics = new Physics();
 		this.spawnManager = new SpawnManager(this.physics);
 		this.score = 0;
+		this.coins = 0;
 
 		// Reset camera and shader state (only if not already initialized)
 		if (!this.shader) {
@@ -359,6 +355,12 @@ export class Game {
 			},
 			this.entities,
 		);
+
+		// Spawn test coins with different amounts
+		Coin.spawn(this, atlas, 1, 3, 0.3, 0); // Single coin
+		Coin.spawn(this, atlas, 3, -3, 0.3, 0); // Small stack
+		Coin.spawn(this, atlas, 7, 0, 0.3, 3); // Medium stack
+		Coin.spawn(this, atlas, 15, 0, 0.3, -3); // Large stack
 	}
 
 	/**
@@ -398,12 +400,7 @@ export class Game {
 	 * Update UI element visibility based on game state
 	 */
 	private updateUIVisibility() {
-		if (
-			!this.mainMenu ||
-			!this.gameOverScreen ||
-			!this.healthDisplay ||
-			!this.scoreDisplay
-		) {
+		if (!this.mainMenu || !this.gameOverScreen || !this.topBar) {
 			return;
 		}
 
@@ -411,21 +408,18 @@ export class Game {
 			case GameState.MENU:
 				this.mainMenu.visible = true;
 				this.gameOverScreen.visible = false;
-				this.healthDisplay.style.display = "none";
-				this.scoreDisplay.visible = false;
+				this.topBar.visible = false;
 				break;
 			case GameState.PLAYING:
 				this.mainMenu.visible = false;
 				this.gameOverScreen.visible = false;
-				this.healthDisplay.style.display = "block";
-				this.scoreDisplay.visible = true;
+				this.topBar.visible = true;
 				break;
 			case GameState.GAME_OVER:
 				this.mainMenu.visible = false;
 				this.gameOverScreen.visible = true;
 				this.gameOverScreen.score = this.score;
-				this.healthDisplay.style.display = "none";
-				this.scoreDisplay.visible = false;
+				this.topBar.visible = false;
 				break;
 		}
 	}
@@ -532,20 +526,9 @@ export class Game {
 	}
 
 	/**
-	 * Update UI elements (health, FPS, score, etc.)
+	 * Update UI elements (health, FPS, score, coins, etc.)
 	 */
 	private updateUI(deltaTime: number) {
-		// Update health display
-		if (this.healthDisplay && this.player) {
-			this.healthDisplay.health = this.player.health;
-			this.healthDisplay.maxHealth = this.player.maxHealth;
-		}
-
-		// Update score display
-		if (this.scoreDisplay) {
-			this.scoreDisplay.score = this.score;
-		}
-
 		// Calculate FPS (rolling average over last 60 frames)
 		if (deltaTime > 0) {
 			this.fpsFrameTimes.push(1 / deltaTime);
@@ -554,13 +537,17 @@ export class Game {
 			}
 		}
 
-		// Update FPS display (only every 10 frames to reduce jitter)
+		// Update top bar (only every 10 frames for FPS to reduce jitter)
 		this.fpsUpdateCounter++;
-		if (this.fpsUpdateCounter >= 10 && this.fpsDisplay) {
+		if (this.fpsUpdateCounter >= 10 && this.topBar && this.player) {
 			const avgFps =
 				this.fpsFrameTimes.reduce((a, b) => a + b, 0) /
 				this.fpsFrameTimes.length;
-			this.fpsDisplay.fps = avgFps;
+			this.topBar.health = this.player.health;
+			this.topBar.maxHealth = this.player.maxHealth;
+			this.topBar.score = this.score;
+			this.topBar.coins = this.coins;
+			this.topBar.fps = avgFps;
 			this.fpsUpdateCounter = 0;
 		}
 
@@ -654,6 +641,25 @@ export class Game {
 			// Remove dead projectiles
 			this.projectiles = this.projectiles.filter((p) => p.isAlive);
 
+			// Update pickups and remove collected ones
+			const collectedPickups: Pickup[] = [];
+			this.pickups = this.pickups.filter((pickup) => {
+				const shouldRemove = pickup.update(this.fixedTimestep, this);
+				if (shouldRemove) {
+					collectedPickups.push(pickup);
+					return false;
+				}
+				return true;
+			});
+
+			// Remove collected pickup entities from the entities array
+			for (const pickup of collectedPickups) {
+				const idx = this.entities.indexOf(pickup);
+				if (idx >= 0) {
+					this.entities.splice(idx, 1);
+				}
+			}
+
 			// Remove despawned enemies and update score
 			const despawnedEnemies: Enemy[] = [];
 			this.enemies = this.enemies.filter((enemy) => {
@@ -667,6 +673,25 @@ export class Game {
 			// Update score for killed enemies
 			if (despawnedEnemies.length > 0) {
 				this.score += despawnedEnemies.length * 100; // 100 points per kill
+
+				// Spawn coins from killed enemies (50% chance)
+				if (this.cachedAtlas) {
+					for (const enemy of despawnedEnemies) {
+						if (Math.random() < 0.5) {
+							// 50% chance to drop a coin
+							const enemyPos = enemy.getPosition();
+							const coinAmount = Math.floor(Math.random() * 3) + 1; // 1-3 coins
+							Coin.spawn(
+								this,
+								this.cachedAtlas,
+								coinAmount,
+								enemyPos[0],
+								0.3,
+								enemyPos[2],
+							);
+						}
+					}
+				}
 
 				// Remove entities belonging to despawned enemies
 				for (const enemy of despawnedEnemies) {
