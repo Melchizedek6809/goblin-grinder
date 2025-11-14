@@ -33,8 +33,10 @@ export class Camera {
 	private angleVelocity: number = 0;
 	private angleStiffness: number = 80.0;
 	private angleDamping: number = 0.75;
-	public distance: number = 5; // Distance from target
-	public height: number = 6; // Height above target
+	public baseDistance: number = 5; // Base distance from target
+	public distance: number = 5; // Actual distance (adjusted for aspect ratio)
+	public baseHeight: number = 6; // Base height above target
+	public height: number = 6; // Actual height (adjusted for aspect ratio)
 
 	constructor(gl: WebGL2RenderingContext, shader: Shader) {
 		this.gl = gl;
@@ -114,6 +116,20 @@ export class Camera {
 	setFollowTarget(targetPos: vec3): void {
 		// Set where the camera should look (the target position - usually player)
 		vec3.copy(this.targetTargetPosition, targetPos);
+
+		// Calculate aspect ratio and adjust zoom for mobile/portrait mode
+		const aspectRatio = this.gl.canvas.width / this.gl.canvas.height;
+
+		// For portrait mode (aspectRatio < 1), zoom out more to see more horizontally
+		// Scale both distance and height to maintain the same view angle
+		let zoomScale = 1.0;
+		if (aspectRatio < 1) {
+			// Zoom out more in portrait mode (e.g., 0.5 aspect = 1.75x zoom)
+			zoomScale = 1 + (1 - aspectRatio) * 1.5;
+		}
+
+		this.distance = this.baseDistance * zoomScale;
+		this.height = this.baseHeight * zoomScale;
 
 		// Calculate camera position based on current angle
 		const cameraOffset = vec3.fromValues(

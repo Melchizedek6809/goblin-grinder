@@ -55,6 +55,9 @@ export class Light {
 		this.shadowTexture = texture;
 
 		this.initShadowMap();
+
+		// Initialize light matrices to avoid using uninitialized values on first frame
+		this.updateMatrices();
 	}
 
 	private initShadowMap(): void {
@@ -93,6 +96,9 @@ export class Light {
 			throw new Error("Shadow framebuffer is not complete");
 		}
 
+		// Clear the shadow map with max depth to avoid uninitialized data artifacts
+		gl.clear(gl.DEPTH_BUFFER_BIT);
+
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 		gl.bindTexture(gl.TEXTURE_2D, null);
 	}
@@ -130,6 +136,10 @@ export class Light {
 		gl.bindFramebuffer(gl.FRAMEBUFFER, this.shadowFramebuffer);
 		gl.viewport(0, 0, this.shadowMapSize, this.shadowMapSize);
 		gl.clear(gl.DEPTH_BUFFER_BIT);
+
+		// Ensure depth testing is enabled for shadow map rendering
+		gl.enable(gl.DEPTH_TEST);
+		gl.depthFunc(gl.LEQUAL);
 
 		// Use depth shader
 		this.depthShader.use();

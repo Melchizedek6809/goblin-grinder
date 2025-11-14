@@ -31,7 +31,7 @@ float cloudShadow(vec2 worldPos, float time) {
     return smoothstep(0.42, 0.58, cloudPattern);
 }
 
-float calculateShadow(vec4 lightSpacePos) {
+float calculateShadow(vec4 lightSpacePos, vec3 normal, vec3 lightDir) {
     // Perspective divide
     vec3 projCoords = lightSpacePos.xyz / lightSpacePos.w;
 
@@ -45,7 +45,11 @@ float calculateShadow(vec4 lightSpacePos) {
     }
 
     float currentDepth = projCoords.z;
-    float bias = 0.005;
+
+    // Slope-scale bias: larger bias for surfaces at grazing angles to the light
+    // This prevents shadow acne (flickering artifacts)
+    float cosTheta = max(dot(normal, lightDir), 0.0);
+    float bias = max(0.008 * (1.0 - cosTheta), 0.002);
 
     // PCF (Percentage Closer Filtering) for smooth shadow edges
     // Using 5-sample plus pattern for better performance (44% fewer samples than 3x3)
@@ -88,7 +92,7 @@ void main() {
     // Calculate lighting from single light source
     vec3 lightDir = normalize(u_lightPosition - v_worldPosition);
     float diffuse = max(dot(normal, lightDir), 0.0);
-    float shadow = calculateShadow(v_lightSpacePosition);
+    float shadow = calculateShadow(v_lightSpacePosition, normal, lightDir);
     finalColor += color * u_lightColor * diffuse * (1.0 - shadow * 0.8);
 
     // Apply cloud shadows (darken areas under clouds)

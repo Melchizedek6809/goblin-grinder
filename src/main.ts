@@ -159,8 +159,10 @@ export class Game {
 	}
 
 	private resize() {
-		this.width = this.canvasElement.clientWidth;
-		this.height = this.canvasElement.clientHeight;
+		// Account for device pixel ratio (important for mobile/Retina displays)
+		const dpr = window.devicePixelRatio || 1;
+		this.width = this.canvasElement.clientWidth * dpr;
+		this.height = this.canvasElement.clientHeight * dpr;
 		this.canvasElement.width = this.width;
 		this.canvasElement.height = this.height;
 	}
