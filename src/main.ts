@@ -196,10 +196,13 @@ export class Game {
 	 * Initialize or reset the game scene
 	 */
 	private async initScene() {
+		console.log("initScene: Starting");
 		if (!this.gl) {
+			console.error("initScene: WebGL2 context is null");
 			throw new Error("WebGL2 not supported");
 		}
 
+		console.log("initScene: WebGL2 context exists");
 		const gl = this.gl;
 
 		// Clear existing game state
@@ -277,17 +280,24 @@ export class Game {
 		this.entities.push(ground);
 
 		// Load or reuse cached atlas
+		console.log("initScene: Loading atlas");
 		let atlas: MeshAtlas;
 		if (this.cachedAtlas) {
+			console.log("initScene: Using cached atlas");
 			atlas = this.cachedAtlas;
 		} else {
+			console.log("initScene: Creating new atlas");
 			atlas = new MeshAtlas();
+			console.log("initScene: Calling atlas.init()");
 			await atlas.init(gl);
+			console.log("initScene: Atlas initialized");
 			this.cachedAtlas = atlas;
 		}
 
+		console.log("initScene: Creating player");
 		// Create player from atlas
 		this.player = new Player(atlas.mage);
+		console.log("initScene: Player created");
 		this.entities.push(...this.player.entities);
 
 		// Add collider to player (layer 0 = player, collide with everything except player layer)
@@ -336,6 +346,8 @@ export class Game {
 			maxScale: 1.3,
 			// No collider - bushes are passable
 		}, this.entities);
+
+		console.log("initScene: Completed successfully");
 	}
 
 	/**
