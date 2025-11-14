@@ -6,6 +6,10 @@ import type { Physics } from "../physics/Physics.ts";
 import { Particle } from "../vfx/Particle.ts";
 import type { ParticleSystem } from "../vfx/ParticleSystem.ts";
 import type { Weapon } from "../weapons/Weapon.ts";
+import {
+	PLAYER_BORDER_PADDING,
+	clampWorldAxis,
+} from "../systems/WorldBounds.ts";
 
 export class Player {
 	public entities: Entity[];
@@ -136,6 +140,8 @@ export class Player {
 			vec3.copy(this.position, newPos);
 		}
 
+		this.enforceGroundBounds();
+
 		// Apply to all entities
 		this.updateEntities();
 	}
@@ -152,6 +158,20 @@ export class Player {
 			if (entity.collider) {
 				vec3.copy(entity.collider.center, this.position);
 			}
+		}
+	}
+
+	private enforceGroundBounds(): void {
+		const clampedX = clampWorldAxis(this.position[0], PLAYER_BORDER_PADDING);
+		const clampedZ = clampWorldAxis(this.position[2], PLAYER_BORDER_PADDING);
+
+		if (clampedX !== this.position[0]) {
+			this.position[0] = clampedX;
+			this.velocity[0] = 0;
+		}
+		if (clampedZ !== this.position[2]) {
+			this.position[2] = clampedZ;
+			this.velocity[2] = 0;
 		}
 	}
 

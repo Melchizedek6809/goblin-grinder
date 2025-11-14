@@ -5,6 +5,12 @@ import type { Physics } from "../physics/Physics.ts";
 import type { Player } from "../objects/Player.ts";
 import type { Renderable } from "../rendering/Renderable.ts";
 import { Enemy } from "./Enemy.ts";
+import {
+	ENEMY_SPAWN_BORDER_PADDING,
+	SCENERY_BORDER_PADDING,
+	clampWorldAxis,
+	getPlayableRadius,
+} from "../systems/WorldBounds.ts";
 
 /**
  * Manages spawning of enemies and static objects
@@ -53,10 +59,16 @@ export class SpawnManager {
 			const distance = 10 + Math.random() * 5;
 			const spawnX = playerPos[0] + Math.cos(angle) * distance;
 			const spawnZ = playerPos[2] + Math.sin(angle) * distance;
+			const safeSpawnX = clampWorldAxis(spawnX, ENEMY_SPAWN_BORDER_PADDING);
+			const safeSpawnZ = clampWorldAxis(spawnZ, ENEMY_SPAWN_BORDER_PADDING);
 
-			this.spawnEnemyGroup(atlas, spawnX, spawnZ, groupSize, entities, enemies);
-			console.log(
-				`Spawned ${groupSize} enemies at distance ${distance.toFixed(1)}`,
+			this.spawnEnemyGroup(
+				atlas,
+				safeSpawnX,
+				safeSpawnZ,
+				groupSize,
+				entities,
+				enemies,
 			);
 		}
 	}
@@ -111,8 +123,14 @@ export class SpawnManager {
 			// Spread enemies in a small circle
 			const angle = (Math.PI * 2 * i) / count;
 			const radius = 1.0 + Math.random() * 1.0; // 1-2 units apart
-			const x = centerX + Math.cos(angle) * radius;
-			const z = centerZ + Math.sin(angle) * radius;
+			const x = clampWorldAxis(
+				centerX + Math.cos(angle) * radius,
+				ENEMY_SPAWN_BORDER_PADDING,
+			);
+			const z = clampWorldAxis(
+				centerZ + Math.sin(angle) * radius,
+				ENEMY_SPAWN_BORDER_PADDING,
+			);
 			this.spawnEnemy(atlas, x, -0.5, z, entities, enemies);
 		}
 	}
@@ -138,11 +156,19 @@ export class SpawnManager {
 
 			// Random position on the ground plane (avoiding the center)
 			const angle = Math.random() * Math.PI * 2;
+			const playableRadius = getPlayableRadius(SCENERY_BORDER_PADDING);
+			const maxDistance = Math.min(config.maxDistance, playableRadius);
+			const minDistance = Math.min(config.minDistance, maxDistance);
 			const distance =
-				config.minDistance +
-				Math.random() * (config.maxDistance - config.minDistance);
-			const x = Math.cos(angle) * distance;
-			const z = Math.sin(angle) * distance;
+				minDistance + Math.random() * Math.max(0, maxDistance - minDistance);
+			const x = clampWorldAxis(
+				Math.cos(angle) * distance,
+				SCENERY_BORDER_PADDING,
+			);
+			const z = clampWorldAxis(
+				Math.sin(angle) * distance,
+				SCENERY_BORDER_PADDING,
+			);
 
 			obj.setPosition(x, config.yOffset, z);
 			obj.setRotationFromEuler(0, Math.random() * 360, 0);

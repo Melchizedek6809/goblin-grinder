@@ -34,6 +34,11 @@ import depthFragmentShaderSource from "./shaders/depth.frag?raw";
 import depthVertexShaderSource from "./shaders/depth.vert?raw";
 import particleFragmentShaderSource from "./shaders/particle.frag?raw";
 import particleVertexShaderSource from "./shaders/particle.vert?raw";
+import {
+	SCENERY_BORDER_PADDING,
+	WORLD_SIZE,
+	getPlayableRadius,
+} from "./systems/WorldBounds.ts";
 import "./components/top-bar.ts";
 import "./components/main-menu.ts";
 import "./components/game-over-screen.ts";
@@ -207,6 +212,10 @@ export class Game {
 			// Enable depth testing
 			gl.enable(gl.DEPTH_TEST);
 			gl.depthFunc(gl.LEQUAL);
+			// Enable backface culling to skip rendering hidden triangles
+			gl.enable(gl.CULL_FACE);
+			gl.cullFace(gl.BACK);
+			gl.frontFace(gl.CCW);
 
 			// Create shaders
 			this.shader = new Shader(gl, vertexShaderSource, fragmentShaderSource);
@@ -256,13 +265,13 @@ export class Game {
 			vec3.fromValues(0, 0, 0),
 			vec3.fromValues(1.0, 1.0, 0.95),
 		);
-		this.light.orthoSize = 15;
+		this.light.orthoSize = 18;
 
 		// Create ground plane
 		const planeMesh = Mesh.createPlane(gl);
 		const ground = new Entity(planeMesh);
 		ground.setPosition(0, -0.5, 0);
-		ground.setScale(64, 1, 64);
+		ground.setScale(WORLD_SIZE, 1, WORLD_SIZE);
 		this.entityManager.addEntity(ground);
 
 		// Load or reuse cached atlas
@@ -319,7 +328,7 @@ export class Game {
 			{
 				yOffset: -0.6,
 				minDistance: 5,
-				maxDistance: 35,
+				maxDistance: getPlayableRadius(SCENERY_BORDER_PADDING),
 				minScale: 0.8,
 				maxScale: 1.2,
 				colliderRadius: 0.5, // Trees have collision
@@ -333,7 +342,7 @@ export class Game {
 			{
 				yOffset: -0.5,
 				minDistance: 3,
-				maxDistance: 33,
+				maxDistance: getPlayableRadius(SCENERY_BORDER_PADDING),
 				minScale: 0.6,
 				maxScale: 1.4,
 				colliderRadius: 0.6, // Rocks have collision
@@ -347,7 +356,7 @@ export class Game {
 			{
 				yOffset: -0.4,
 				minDistance: 3,
-				maxDistance: 33,
+				maxDistance: getPlayableRadius(SCENERY_BORDER_PADDING),
 				minScale: 0.7,
 				maxScale: 1.3,
 				// No collider - bushes are passable

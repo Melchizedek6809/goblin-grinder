@@ -168,11 +168,11 @@ export class Mesh {
 
 		const indices = new Uint16Array([
 			0,
+			2,
 			1,
-			2,
 			0,
-			2,
-			3, // Two triangles forming a quad
+			3,
+			2, // Two triangles forming a quad with upward-facing winding
 		]);
 
 		return new Mesh(gl, vertices, indices);

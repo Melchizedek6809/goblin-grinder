@@ -10,7 +10,6 @@ import type { Shader } from "./Shader.ts";
 export class Renderer {
 	private gl: WebGL2RenderingContext;
 	private shader: Shader;
-
 	constructor(gl: WebGL2RenderingContext, shader: Shader) {
 		this.gl = gl;
 		this.shader = shader;

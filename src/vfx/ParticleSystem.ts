@@ -167,9 +167,13 @@ export class ParticleSystem {
 
 	private renderBatch(particles: Particle[]): void {
 		const gl = this.gl;
+		const count = particles.length;
+		if (count === 0) {
+			return;
+		}
 
 		// Update buffers with particle data
-		for (let i = 0; i < particles.length; i++) {
+		for (let i = 0; i < count; i++) {
 			const particle = particles[i];
 			const posIdx = i * 3;
 			const colorIdx = i * 4;
@@ -187,17 +191,20 @@ export class ParticleSystem {
 		}
 
 		// Upload to GPU
+		const positionSlice = this.positions.subarray(0, count * 3);
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
-		gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.positions);
+		gl.bufferSubData(gl.ARRAY_BUFFER, 0, positionSlice);
 
+		const colorSlice = this.colors.subarray(0, count * 4);
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
-		gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.colors);
+		gl.bufferSubData(gl.ARRAY_BUFFER, 0, colorSlice);
 
+		const sizeSlice = this.sizes.subarray(0, count);
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.sizeBuffer);
-		gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.sizes);
+		gl.bufferSubData(gl.ARRAY_BUFFER, 0, sizeSlice);
 
 		// Draw this batch
-		gl.drawArraysInstanced(gl.POINTS, 0, 1, particles.length);
+		gl.drawArraysInstanced(gl.POINTS, 0, 1, count);
 	}
 
 	clear(): void {
