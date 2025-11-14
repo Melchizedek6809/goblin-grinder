@@ -1,23 +1,20 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-Source TypeScript lives in `src/`, with gameplay logic split across single-file classes (e.g., `Player.ts`, `Camera.ts`). Rendering assets and GLSL live under `src/assets` and `src/shaders`, while static HTML/CSS sits in `public/`. Builds land in `dist/`; keep generated artifacts out of commits. When introducing subsystems, prefer new folders inside `src/` (e.g., `src/systems/`) over sprawling files.
+Goblin Grinder is a TypeScript WebGL2 game served via Vite. Source lives in `src/` with domain folders such as `rendering`, `systems`, `objects`, and `vfx`. Shaders are stored in `src/shaders/*.vert|.frag`, while reusable meshes and loaders sit under `src/assets/`. Web components for menus live in `src/components/`, and the main entry point plus bootstrap logic is in `src/main.ts`. Static files that must be copied verbatim (textures, fonts, HTML shell) belong in `public/`, and production bundles are emitted to `dist/`. Keep new runtime data either in `public/` or under `src/assets/models` so Vite can import it without extra configuration.
 
 ## Build, Test, and Development Commands
-- `npm run dev` – Launch Vite dev server with HMR; quickest way to validate shaders and camera tuning.
-- `npm run build` – Run `tsc` then Vite for a production bundle; ensure it passes before tagging releases.
-- `npm run preview` – Serve the last build to verify asset loading without dev tooling.
-- `npm run typecheck` – Strict TypeScript diagnostics; run before reviewing.
-- `npm run lint` / `npm run format` – Biome-powered linting/formatting over `src/`; keep the tree clean before committing.
+- `npm run dev` launches the Vite dev server with hot reload for rapid gameplay iteration.
+- `npm run build` runs `tsc` followed by `vite build` to produce an optimized bundle for GitHub Pages.
+- `npm run preview` serves the contents of `dist/` so you can validate the exact production output.
+- `npm run typecheck` executes `tsc --noEmit` to catch structural and typing regressions quickly.
+- `npm run lint` / `npm run format` invoke Biome; run lint before committing and format if Biome suggests layout changes.
 
 ## Coding Style & Naming Conventions
-Biome enforces tab indentation and double quotes; avoid manual overrides. Exported classes stay in `PascalCase`, utilities in `camelCase`, shaders keep `.vert`/`.frag` suffixes mirroring their material names, and assets use lowercase-kebab (e.g., `goblin-warrior.glb`). Keep modules focused; favor composition over expanding `main.ts`.
+Biome (see `biome.json`) enforces tab indentation, double quotes, trailing commas, and organized imports. Use PascalCase for classes/components (`Player`, `FireballWeapon`), camelCase for functions and fields, and kebab-case for asset filenames (`static-tree.glb`). Keep shader names descriptive of their pass (`depth.vert`, `particle.frag`) and mirror import names in TypeScript. Prefer small, focused modules and colocate helper types next to their usage to align with existing patterns.
 
-## Testing & Quality Gates
-There is no automated gameplay test suite yet, so pair `npm run typecheck` with manual smoke-tests in the dev server. When adding deterministic utilities (math, loading), colocate future specs in `src/**/__tests__` with `.spec.ts` suffix so Vitest or similar can drop in later. Document GPU-specific assumptions (resolution, precision) in code comments to aid reviewers.
+## Testing Guidelines
+There is no automated gameplay suite yet, so rely on `npm run typecheck`, `npm run lint`, and manual playtesting in both dev and preview builds. If you add Vitest/Playwright coverage, place specs beside their modules (`SpawnManager.spec.ts`) and cover spawning, physics, or rendering math rather than GPU output. Before submitting changes, play a full round with the console open, verify shaders on low-end hardware when touching rendering, and document any edge cases not handled.
 
 ## Commit & Pull Request Guidelines
-History so far uses short imperative titles (`Init`), so continue with ≤72-character subject lines that describe the change ("Add spring camera damping"). Reference GitHub issues in the body, list test commands executed, and attach GIFs or screenshots for visual tweaks. PR descriptions should call out shader or asset changes explicitly and mention any compatibility risks (e.g., requiring WebGL extensions).
-
-## Asset & Shader Handling
-Store source textures/models under `src/assets/` and keep optimized outputs alongside originals with clear suffixes (`-lowpoly`, `-albedo`). Name uniforms consistently (`uView`, `uProjection`) and document required attributes in the file header. When editing GLSL, re-run `npm run build` to catch compile-time regressions that dev-mode may gloss over.
+Git history favors concise imperative subjects (“Improve main menu”, “Code cleanup”); follow that tone and keep each commit scoped to one concern. Reference issues or tasks in the body (`Fixes #42`) and describe asset additions, especially when crediting Kay Lousberg’s models. Pull requests should include: summary of gameplay/UI impact, screenshots or clips for visible changes, instructions to reproduce bugs or verify fixes, and notes about new configs or feature flags. Mention any manual verification performed (e.g., “tested npm run preview in Chrome + Firefox”) so reviewers can trust the coverage.

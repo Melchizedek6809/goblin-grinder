@@ -353,12 +353,6 @@ export class Game {
 			},
 			this.entityManager.getMutableEntities(),
 		);
-
-		// Spawn test coins with different amounts
-		Coin.spawn(this, atlas, 1, 3, 0.3, 0); // Single coin
-		Coin.spawn(this, atlas, 3, -3, 0.3, 0); // Small stack
-		Coin.spawn(this, atlas, 7, 0, 0.3, 3); // Medium stack
-		Coin.spawn(this, atlas, 15, 0, 0.3, -3); // Large stack
 	}
 
 	/**
