@@ -1,3 +1,4 @@
+import bottleGlbUrl from "../assets/models/Bottle.glb?url";
 import bush2DGlbUrl from "../assets/models/Bush2D.glb?url";
 import bush2EGlbUrl from "../assets/models/Bush2E.glb?url";
 import bush2FGlbUrl from "../assets/models/Bush2F.glb?url";
@@ -64,6 +65,7 @@ export class MeshAtlas {
 	public coinStackSmall: Mesh | null = null;
 	public coinStackMedium: Mesh | null = null;
 	public coinStackLarge: Mesh | null = null;
+	public bottle: Mesh | null = null;
 
 	/**
 	 * Load all meshes from the atlas.
@@ -129,6 +131,7 @@ export class MeshAtlas {
 			coinStackSmall,
 			coinStackMedium,
 			coinStackLarge,
+			bottle,
 		] = await Promise.all([
 			Mesh.fromUrl(gl, chestGlbUrl, dungeonPngUrl),
 			Mesh.fromUrl(gl, chestGoldGlbUrl, dungeonPngUrl),
@@ -136,6 +139,7 @@ export class MeshAtlas {
 			Mesh.fromUrl(gl, coinStackSmallGlbUrl, dungeonPngUrl),
 			Mesh.fromUrl(gl, coinStackMediumGlbUrl, dungeonPngUrl),
 			Mesh.fromUrl(gl, coinStackLargeGlbUrl, dungeonPngUrl),
+			Mesh.fromUrl(gl, bottleGlbUrl, dungeonPngUrl),
 		]);
 
 		this.chest = chest;
@@ -144,6 +148,7 @@ export class MeshAtlas {
 		this.coinStackSmall = coinStackSmall;
 		this.coinStackMedium = coinStackMedium;
 		this.coinStackLarge = coinStackLarge;
+		this.bottle = bottle;
 	}
 
 	/**

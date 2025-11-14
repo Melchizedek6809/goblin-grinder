@@ -1,5 +1,6 @@
 import type { MeshAtlas } from "../assets/MeshAtlas.ts";
 import { Coin } from "../rewards/Coin.ts";
+import { HealthPotion } from "../rewards/HealthPotion.ts";
 import type { Enemy } from "../enemies/Enemy.ts";
 import type { Pickup } from "../rewards/Pickup.ts";
 import type { Game } from "../main.ts";
@@ -102,20 +103,31 @@ export class RewardSystem {
 				enemy.rewardGranted = true;
 				this.addScore(100); // 100 points per kill
 
-				// Spawn coins from killed enemies (50% chance)
-				if (atlas && Math.random() < 0.5) {
-					// 50% chance to drop a coin
+				if (atlas) {
 					const enemyPos = enemy.getPosition();
-					const coinAmount = Math.floor(Math.random() * 3) + 1; // 1-3 coins
-					Coin.spawn(
-						game,
-						atlas,
-						coinAmount,
-						enemyPos[0],
-						0.3,
-						enemyPos[2],
-						true, // Play spawn animation
-					);
+
+					// Spawn health potion from killed enemies (2% chance)
+					if (Math.random() < 0.05) {
+						HealthPotion.spawn(
+							game,
+							atlas,
+							enemyPos[0],
+							0.3,
+							enemyPos[2],
+							true, // Play spawn animation
+						);
+					} else if (Math.random() < 0.5) {
+						const coinAmount = Math.floor(Math.random() * 3) + 1; // 1-3 coins
+						Coin.spawn(
+							game,
+							atlas,
+							coinAmount,
+							enemyPos[0],
+							0.3,
+							enemyPos[2],
+							true, // Play spawn animation
+						);
+					}
 				}
 			}
 		}
