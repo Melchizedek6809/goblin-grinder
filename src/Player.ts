@@ -1,6 +1,8 @@
 import { quat, vec3 } from "gl-matrix";
 import { Entity } from "./Entity.ts";
 import type { Mesh } from "./Mesh.ts";
+import { Particle } from "./Particle.ts";
+import type { ParticleSystem } from "./ParticleSystem.ts";
 import type { SphereCollider } from "./physics/Collider.ts";
 import type { Physics } from "./physics/Physics.ts";
 import type { Weapon } from "./Weapon.ts";
@@ -23,6 +25,10 @@ export class Player {
 
 	// Weapons
 	public weapons: Weapon[] = [];
+
+	// Walking particles
+	private particleTimer: number = 0;
+	private particleSpawnRate: number = 0.08; // Spawn particles every 0.08 seconds
 
 	constructor(meshes: Mesh[]) {
 		this.position = vec3.fromValues(0, -0.5, 0);
@@ -144,8 +150,77 @@ export class Player {
 		}
 	}
 
-	update(_deltaTime: number): void {
-		// Future: animations, etc.
+	update(deltaTime: number, particleSystem?: ParticleSystem): void {
+		// Spawn walking particles if moving
+		if (particleSystem) {
+			this.spawnWalkingParticles(deltaTime, particleSystem);
+		}
+	}
+
+	/**
+	 * Spawn dust particles when the player is walking
+	 */
+	private spawnWalkingParticles(
+		deltaTime: number,
+		particleSystem: ParticleSystem,
+	): void {
+		// Check if player is moving (velocity magnitude > threshold)
+		const speed = Math.sqrt(
+			this.velocity[0] * this.velocity[0] +
+				this.velocity[2] * this.velocity[2],
+		);
+
+		// Only spawn particles if moving at a decent speed
+		if (speed < 0.5) {
+			this.particleTimer = 0; // Reset timer when not moving
+			return;
+		}
+
+		this.particleTimer += deltaTime;
+
+		// Spawn particles at the configured rate
+		if (this.particleTimer >= this.particleSpawnRate) {
+			this.particleTimer = 0;
+
+			// Spawn 1-2 dust particles
+			const particleCount = Math.floor(Math.random() * 2) + 1;
+			for (let i = 0; i < particleCount; i++) {
+				// Spawn at player's feet with slight random offset
+				const offsetX = (Math.random() - 0.5) * 0.3;
+				const offsetZ = (Math.random() - 0.5) * 0.3;
+
+				const particlePos = vec3.fromValues(
+					this.position[0] + offsetX,
+					this.position[1] + 0.1, // Slightly above ground
+					this.position[2] + offsetZ,
+				);
+
+				// Velocity: slight upward and outward movement
+				const velocity = vec3.fromValues(
+					(Math.random() - 0.5) * 0.3,
+					Math.random() * 0.2 + 0.1, // Upward
+					(Math.random() - 0.5) * 0.3,
+				);
+
+				// Dust color (gray-white)
+				const color = vec3.fromValues(0.7, 0.7, 0.7);
+				const endColor = vec3.fromValues(0.5, 0.5, 0.5);
+
+				// Create dust particle
+				const particle = new Particle(
+					particlePos,
+					velocity,
+					color,
+					12.0 + Math.random() * 12.0, // Start size 12-24
+					0.3 + Math.random() * 0.2, // Lifetime 0.3-0.5s
+					0.0, // No gravity for dust
+					endColor,
+					0.5, // End size (shrink)
+				);
+
+				particleSystem.spawn(particle);
+			}
+		}
 	}
 
 	setPosition(x: number, y: number, z: number): void {

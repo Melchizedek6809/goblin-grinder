@@ -575,7 +575,7 @@ export class Game {
 
 		// Update player logic (only during gameplay)
 		if (this.gameState === GameState.PLAYING) {
-			this.player.update(this.fixedTimestep);
+			this.player.update(this.fixedTimestep, this.particleSystem || undefined);
 
 			// Update weapons
 			if (this.particleSystem) {
