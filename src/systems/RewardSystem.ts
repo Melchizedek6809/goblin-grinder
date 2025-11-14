@@ -1,5 +1,6 @@
 import type { MeshAtlas } from "../assets/MeshAtlas.ts";
 import { Coin } from "../rewards/Coin.ts";
+import { ExperiencePickup } from "../rewards/ExperiencePickup.ts";
 import { HealthPotion } from "../rewards/HealthPotion.ts";
 import type { Enemy } from "../enemies/Enemy.ts";
 import type { Pickup } from "../rewards/Pickup.ts";
@@ -105,19 +106,30 @@ export class RewardSystem {
 
 				if (atlas) {
 					const enemyPos = enemy.getPosition();
+					const experienceAmount = this.getExperienceReward(enemy);
+					ExperiencePickup.spawn(
+						game,
+						atlas,
+						experienceAmount,
+						enemyPos[0],
+						0.3,
+						enemyPos[2],
+						true,
+					);
 
-					// Spawn health potion from killed enemies (2% chance)
-					if (Math.random() < 0.05) {
+					if (Math.random() < 0.04) {
 						HealthPotion.spawn(
 							game,
 							atlas,
 							enemyPos[0],
 							0.3,
 							enemyPos[2],
-							true, // Play spawn animation
+							true,
 						);
-					} else if (Math.random() < 0.5) {
-						const coinAmount = Math.floor(Math.random() * 3) + 1; // 1-3 coins
+					}
+
+					if (Math.random() < 0.2) {
+						const coinAmount = Math.floor(Math.random() * 3) + 1;
 						Coin.spawn(
 							game,
 							atlas,
@@ -125,12 +137,17 @@ export class RewardSystem {
 							enemyPos[0],
 							0.3,
 							enemyPos[2],
-							true, // Play spawn animation
+							true,
 						);
 					}
 				}
 			}
 		}
+	}
+
+	private getExperienceReward(enemy: Enemy): number {
+		const scaled = Math.round(enemy.maxHealth / 100);
+		return Math.max(1, scaled);
 	}
 
 	/**

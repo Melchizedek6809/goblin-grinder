@@ -21,7 +21,6 @@ import { DebugRenderer } from "./rendering/DebugRenderer.ts";
 import { Light } from "./rendering/Light.ts";
 import { Renderer } from "./rendering/Renderer.ts";
 import { Shader } from "./rendering/Shader.ts";
-import { Coin } from "./rewards/Coin.ts";
 import { CombatSystem } from "./systems/CombatSystem.ts";
 import { EntityManager } from "./systems/EntityManager.ts";
 import { ProjectileManager } from "./systems/ProjectileManager.ts";
@@ -38,6 +37,7 @@ import particleVertexShaderSource from "./shaders/particle.vert?raw";
 import "./components/top-bar.ts";
 import "./components/main-menu.ts";
 import "./components/game-over-screen.ts";
+import "./components/level-up-modal.ts";
 
 export class Game {
 	public readonly rootElement: HTMLElement;
@@ -84,6 +84,7 @@ export class Game {
 
 	// Game state
 	private gameState: GameState = GameState.MENU;
+	private paused: boolean = false;
 
 	// Cache for loaded assets (to avoid reloading on restart)
 	private cachedAtlas: MeshAtlas | null = null;
@@ -361,6 +362,8 @@ export class Game {
 	private async startGame() {
 		try {
 			await this.initScene();
+			this.setPaused(false);
+			this.uiManager.hideLevelUpModal();
 			this.gameState = GameState.PLAYING;
 			this.uiManager.updateVisibility(this.gameState);
 		} catch (error) {
@@ -376,6 +379,8 @@ export class Game {
 	 */
 	private async restartGame() {
 		await this.initScene();
+		this.setPaused(false);
+		this.uiManager.hideLevelUpModal();
 		this.gameState = GameState.PLAYING;
 		this.uiManager.updateVisibility(this.gameState);
 	}
@@ -385,11 +390,18 @@ export class Game {
 	 */
 	private backToMenu() {
 		this.gameState = GameState.MENU;
+		this.setPaused(false);
+		this.uiManager.hideLevelUpModal();
 		this.uiManager.updateVisibility(this.gameState);
 	}
 
 	private updateCamera(deltaTime: number) {
-		if (!this.camera || !this.player || this.gameState !== GameState.PLAYING)
+		if (
+			!this.camera ||
+			!this.player ||
+			this.gameState !== GameState.PLAYING ||
+			this.paused
+		)
 			return;
 
 		// Poll input state
@@ -508,6 +520,7 @@ export class Game {
 			this.player.maxHealth,
 			this.rewardSystem.getScore(),
 			this.rewardSystem.getCoins(),
+			this.player.getExperienceProgress(),
 		);
 
 		// Check for game over condition
@@ -523,6 +536,7 @@ export class Game {
 	 */
 	private fixedUpdate() {
 		if (!this.player || !this.particleSystem) return;
+		if (this.paused) return;
 
 		// Update player logic (only during gameplay)
 		if (this.gameState === GameState.PLAYING) {
@@ -589,12 +603,18 @@ export class Game {
 				this.cachedAtlas,
 			);
 		}
+
+		this.checkLevelUpPending();
 	}
 
 	/**
 	 * Apply movement interpolation - runs every render frame for smooth movement
 	 */
 	private applyMovement(deltaTime: number) {
+		if (this.paused) {
+			return;
+		}
+
 		// Apply enemy movement with physics (continues during game over)
 		if (
 			this.gameState === GameState.PLAYING ||
@@ -625,6 +645,52 @@ export class Game {
 				this.enemies,
 			);
 		}
+	}
+
+	private checkLevelUpPending(): void {
+		if (!this.player || this.paused || this.gameState !== GameState.PLAYING) {
+			return;
+		}
+
+		if (this.player.hasPendingLevelUp()) {
+			this.openLevelUpModal();
+		}
+	}
+
+	private openLevelUpModal(): void {
+		if (!this.player) return;
+		this.setPaused(true);
+
+		const increaseHpButton = this.createLevelUpButton("Increase Max HP", () => {
+			if (!this.player) return;
+			this.player.increaseMaxHealth(20);
+		});
+
+		this.uiManager.showLevelUpModal([increaseHpButton]);
+	}
+
+	private createLevelUpButton(
+		label: string,
+		onSelect: () => void,
+	): HTMLButtonElement {
+		const button = document.createElement("button");
+		button.textContent = label;
+		button.addEventListener("click", () => {
+			this.applyLevelUpChoice(onSelect);
+		});
+		return button;
+	}
+
+	private applyLevelUpChoice(onSelect: () => void): void {
+		if (!this.player) return;
+		onSelect();
+		this.player.levelUp();
+		this.uiManager.hideLevelUpModal();
+		this.setPaused(false);
+	}
+
+	private setPaused(value: boolean): void {
+		this.paused = value;
 	}
 
 	/**

@@ -9,6 +9,7 @@ import coinStackLargeGlbUrl from "../assets/models/CoinStackLarge.glb?url";
 import coinStackMediumGlbUrl from "../assets/models/CoinStackMedium.glb?url";
 import coinStackSmallGlbUrl from "../assets/models/CoinStackSmall.glb?url";
 import dungeonPngUrl from "../assets/models/Dungeon.png";
+import shardGlbUrl from "../assets/models/Shard.glb?url";
 // Static imports for Vite bundling
 // Note: ?url suffix tells Vite to treat these as URL assets
 import mageGlbUrl from "../assets/models/Mage.glb?url";
@@ -66,6 +67,7 @@ export class MeshAtlas {
 	public coinStackMedium: Mesh | null = null;
 	public coinStackLarge: Mesh | null = null;
 	public bottle: Mesh | null = null;
+	public shard: Mesh | null = null;
 
 	/**
 	 * Load all meshes from the atlas.
@@ -132,6 +134,7 @@ export class MeshAtlas {
 			coinStackMedium,
 			coinStackLarge,
 			bottle,
+			shard,
 		] = await Promise.all([
 			Mesh.fromUrl(gl, chestGlbUrl, dungeonPngUrl),
 			Mesh.fromUrl(gl, chestGoldGlbUrl, dungeonPngUrl),
@@ -140,6 +143,7 @@ export class MeshAtlas {
 			Mesh.fromUrl(gl, coinStackMediumGlbUrl, dungeonPngUrl),
 			Mesh.fromUrl(gl, coinStackLargeGlbUrl, dungeonPngUrl),
 			Mesh.fromUrl(gl, bottleGlbUrl, dungeonPngUrl),
+			Mesh.fromUrl(gl, shardGlbUrl, dungeonPngUrl),
 		]);
 
 		this.chest = chest;
@@ -149,6 +153,7 @@ export class MeshAtlas {
 		this.coinStackMedium = coinStackMedium;
 		this.coinStackLarge = coinStackLarge;
 		this.bottle = bottle;
+		this.shard = shard;
 	}
 
 	/**

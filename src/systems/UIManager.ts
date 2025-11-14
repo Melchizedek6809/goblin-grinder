@@ -1,4 +1,5 @@
 import type { GameOverScreen } from "../components/game-over-screen.ts";
+import type { LevelUpModal } from "../components/level-up-modal.ts";
 import type { MainMenu } from "../components/main-menu.ts";
 import type { TopBar } from "../components/top-bar.ts";
 
@@ -18,6 +19,7 @@ export class UIManager {
 	private topBar: TopBar | null = null;
 	private mainMenu: MainMenu | null = null;
 	private gameOverScreen: GameOverScreen | null = null;
+	private levelUpModal: LevelUpModal | null = null;
 
 	// FPS tracking
 	private fpsFrameTimes: number[] = [];
@@ -35,11 +37,13 @@ export class UIManager {
 			customElements.whenDefined("top-bar"),
 			customElements.whenDefined("main-menu"),
 			customElements.whenDefined("game-over-screen"),
+			customElements.whenDefined("level-up-modal"),
 		]);
 
 		this.topBar = document.querySelector("top-bar");
 		this.mainMenu = document.querySelector("main-menu");
 		this.gameOverScreen = document.querySelector("game-over-screen");
+		this.levelUpModal = document.querySelector("level-up-modal");
 	}
 
 	/**
@@ -68,6 +72,7 @@ export class UIManager {
 				this.mainMenu.visible = true;
 				this.gameOverScreen.visible = false;
 				this.topBar.visible = false;
+				this.hideLevelUpModal();
 				break;
 			case GameState.PLAYING:
 				this.mainMenu.visible = false;
@@ -78,6 +83,7 @@ export class UIManager {
 				this.mainMenu.visible = false;
 				this.gameOverScreen.visible = true;
 				this.topBar.visible = false;
+				this.hideLevelUpModal();
 				break;
 		}
 	}
@@ -105,6 +111,7 @@ export class UIManager {
 		maxHealth: number,
 		score: number,
 		coins: number,
+		xpProgress: number,
 	): void {
 		// Calculate FPS (rolling average over last 60 frames)
 		if (deltaTime > 0) {
@@ -125,6 +132,7 @@ export class UIManager {
 			this.topBar.score = score;
 			this.topBar.coins = coins;
 			this.topBar.fps = avgFps;
+			this.topBar.xpProgress = xpProgress;
 			this.fpsUpdateCounter = 0;
 		}
 	}
@@ -135,5 +143,40 @@ export class UIManager {
 	resetFPS(): void {
 		this.fpsFrameTimes = [];
 		this.fpsUpdateCounter = 0;
+	}
+
+	showLevelUpModal(optionElements: HTMLElement[]): void {
+		if (!this.levelUpModal) {
+			return;
+		}
+		this.setLevelUpOptions(optionElements);
+		this.levelUpModal.visible = true;
+	}
+
+	hideLevelUpModal(): void {
+		if (!this.levelUpModal) {
+			return;
+		}
+		this.levelUpModal.visible = false;
+		this.clearLevelUpOptions();
+	}
+
+	private setLevelUpOptions(optionElements: HTMLElement[]): void {
+		if (!this.levelUpModal) {
+			return;
+		}
+		this.clearLevelUpOptions();
+		for (const element of optionElements) {
+			this.levelUpModal.append(element);
+		}
+	}
+
+	private clearLevelUpOptions(): void {
+		if (!this.levelUpModal) {
+			return;
+		}
+		while (this.levelUpModal.firstChild) {
+			this.levelUpModal.removeChild(this.levelUpModal.firstChild);
+		}
 	}
 }

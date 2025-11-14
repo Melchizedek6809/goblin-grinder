@@ -18,6 +18,9 @@ export class TopBar extends LitElement {
 	@property({ type: Number })
 	fps = 0;
 
+	@property({ type: Number })
+	xpProgress = 0;
+
 	@property({ type: Boolean })
 	visible = true;
 
@@ -43,12 +46,32 @@ export class TopBar extends LitElement {
 		:host {
 			display: block;
 			position: absolute;
-			top: 20px;
+			top: 0;
 			left: 0;
 			right: 0;
+			padding-top: 24px;
 			font-family: monospace;
 			pointer-events: none;
 			user-select: none;
+		}
+
+		.xp-bar {
+			position: absolute;
+			top: 0;
+			left: 0;
+			right: 0;
+			height: 4px;
+			background-color: rgba(30, 96, 255, 0.25);
+			overflow: hidden;
+			box-shadow: 0 0 8px rgba(0, 150, 255, 0.25);
+		}
+
+		.xp-bar-fill {
+			height: 100%;
+			width: 0%;
+			background: linear-gradient(90deg, #3be0ff, #238bff);
+			box-shadow: 0 0 8px rgba(35, 139, 255, 0.8);
+			transition: width 0.1s ease-in-out;
 		}
 
 		.top-bar-container {
@@ -203,7 +226,7 @@ export class TopBar extends LitElement {
 		/* Extra small screens: even more compact */
 		@media (max-width: 600px) {
 			:host {
-				top: 10px;
+				padding-top: 18px;
 			}
 
 			.top-bar-container {
@@ -397,6 +420,12 @@ export class TopBar extends LitElement {
 		}
 
 		return html`
+			<div class="xp-bar">
+				<div
+					class="xp-bar-fill"
+					style="width: ${(Math.max(0, Math.min(1, this.xpProgress)) * 100).toFixed(2)}%"
+				></div>
+			</div>
 			<div class="top-bar-container">
 				<div class="health-section">
 					<div class="hearts">${hearts}</div>

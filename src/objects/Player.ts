@@ -22,6 +22,9 @@ export class Player {
 	// Health
 	public health: number = 100;
 	public maxHealth: number = 100;
+	public experience: number = 0;
+	private xpToNextLevel: number = 4;
+	private levelUpReady: boolean = false;
 
 	// Weapons
 	public weapons: Weapon[] = [];
@@ -241,5 +244,50 @@ export class Player {
 		console.log(
 			`Player took ${amount} damage. Health: ${this.health}/${this.maxHealth}`,
 		);
+	}
+
+	addExperience(amount: number): void {
+		if (this.levelUpReady) {
+			return;
+		}
+
+		this.experience += amount;
+		console.log(
+			`Gained ${amount} XP. Total XP: ${this.experience}/${this.xpToNextLevel}`,
+		);
+
+		if (this.experience >= this.xpToNextLevel) {
+			this.experience = this.xpToNextLevel;
+			this.levelUpReady = true;
+			console.log("Level up ready!");
+		}
+	}
+
+	getExperienceProgress(): number {
+		if (this.levelUpReady) {
+			return 1;
+		}
+		if (this.xpToNextLevel <= 0) return 0;
+		return Math.min(this.experience / this.xpToNextLevel, 1);
+	}
+
+	hasPendingLevelUp(): boolean {
+		return this.levelUpReady;
+	}
+
+	levelUp(): void {
+		if (!this.levelUpReady) {
+			return;
+		}
+		this.levelUpReady = false;
+		this.experience = 0;
+		this.xpToNextLevel *= 2;
+		console.log(`Level up! Next level at ${this.xpToNextLevel} XP.`);
+	}
+
+	increaseMaxHealth(amount: number): void {
+		this.maxHealth += amount;
+		this.health = this.maxHealth;
+		console.log(`Max HP increased to ${this.maxHealth}`);
 	}
 }

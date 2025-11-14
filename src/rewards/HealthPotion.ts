@@ -15,6 +15,12 @@ export class HealthPotion extends Pickup {
 	private spawnAnimationDuration: number = 0.8; // 0.8 seconds for spawn animation
 	private spawnJumpHeight: number = 1.0; // How high to jump
 	private targetScale: number = 0.5; // Final scale after animation
+	private spawnStartX: number = 0;
+	private spawnStartZ: number = 0;
+	private spawnTargetX: number = 0;
+	private spawnTargetZ: number = 0;
+	private spawnRotationAngle: number = 0;
+	private spawnRotationSpeed: number = 120; // Degrees per second while spawning
 
 	constructor(
 		meshAtlas: MeshAtlas,
@@ -31,10 +37,21 @@ export class HealthPotion extends Pickup {
 		if (playSpawnAnimation) {
 			this.isSpawnAnimating = true;
 			this.setUniformScale(0);
+			this.configureSpawnArc(x, z);
 		} else {
 			// Scale bottle to be smaller
 			this.setUniformScale(0.5);
 		}
+	}
+
+	private configureSpawnArc(x: number, z: number): void {
+		this.spawnStartX = x;
+		this.spawnStartZ = z;
+		const angle = Math.random() * Math.PI * 2;
+		const radius = 0.6 + Math.random() * 0.9; // Spread pickups up to ~1.5 units away
+		this.spawnTargetX = x + Math.cos(angle) * radius;
+		this.spawnTargetZ = z + Math.sin(angle) * radius;
+		this.spawnRotationAngle = Math.random() * 360;
 	}
 
 	/**
@@ -61,10 +78,24 @@ export class HealthPotion extends Pickup {
 			const jumpY = a * t * t + b * t;
 			this.position[1] = jumpY;
 
+			// Slide away from the spawn center while scaling
+			this.position[0] =
+				this.spawnStartX + (this.spawnTargetX - this.spawnStartX) * easeT;
+			this.position[2] =
+				this.spawnStartZ + (this.spawnTargetZ - this.spawnStartZ) * easeT;
+
+			// Keep spinning so the pickup never looks static
+			this.spawnRotationAngle += this.spawnRotationSpeed * deltaTime;
+			const rotationRadians = (this.spawnRotationAngle * Math.PI) / 180;
+			this.setRotationFromEuler(0, rotationRadians, 0);
+
 			// End spawn animation
 			if (t >= 1.0) {
 				this.isSpawnAnimating = false;
 				this.setUniformScale(this.targetScale);
+				this.position[0] = this.spawnTargetX;
+				this.position[2] = this.spawnTargetZ;
+				this.position[1] = this.baseY;
 			}
 
 			// Don't run parent update during spawn animation
