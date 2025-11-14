@@ -7,7 +7,7 @@ export class FpsDisplay extends LitElement {
 	fps = 0;
 
 	@property({ type: Boolean })
-	visible = false;
+	visible = true;
 
 	static styles = css`
 		:host {
@@ -16,7 +16,7 @@ export class FpsDisplay extends LitElement {
 			right: 20px;
 			font-family: monospace;
 			font-size: 16px;
-			color: #00ff00;
+			color: #cccccc;
 			pointer-events: none;
 			user-select: none;
 		}

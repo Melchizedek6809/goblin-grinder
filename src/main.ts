@@ -519,7 +519,6 @@ export class Game {
 				this.fpsFrameTimes.reduce((a, b) => a + b, 0) /
 				this.fpsFrameTimes.length;
 			this.fpsDisplay.fps = avgFps;
-			this.fpsDisplay.visible = this.debugMode;
 			this.fpsUpdateCounter = 0;
 		}
 
