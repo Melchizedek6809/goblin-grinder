@@ -15,6 +15,9 @@ import { StaticBush } from "./StaticBush.ts";
 import { StaticRock } from "./StaticRock.ts";
 import { StaticTree } from "./StaticTree.ts";
 import { KeyboardInput } from "./input/KeyboardInput.ts";
+import { MouseInput } from "./input/MouseInput.ts";
+import { TouchInput } from "./input/TouchInput.ts";
+import { CompositeInput } from "./input/CompositeInput.ts";
 import type { InputSource } from "./input/InputSource.ts";
 import { createSphereCollider } from "./physics/Collider.ts";
 import { Physics } from "./physics/Physics.ts";
@@ -147,7 +150,12 @@ export class Game {
 			}
 		});
 
-		this.inputSource = new KeyboardInput();
+		// Create composite input that supports keyboard, mouse, and touch
+		this.inputSource = new CompositeInput([
+			new KeyboardInput(),
+			new MouseInput(),
+			new TouchInput(),
+		]);
 		this.initContext();
 
 		// Start render loop immediately (but game won't update until PLAYING state)
