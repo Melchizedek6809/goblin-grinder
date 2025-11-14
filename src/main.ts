@@ -661,12 +661,44 @@ export class Game {
 		if (!this.player) return;
 		this.setPaused(true);
 
-		const increaseHpButton = this.createLevelUpButton("Increase Max HP", () => {
-			if (!this.player) return;
-			this.player.increaseMaxHealth(20);
-		});
+		const increaseHpButton = this.createLevelUpButton(
+			"❤️ Increase Max HP",
+			() => {
+				if (!this.player) return;
+				this.player.increaseMaxHealth(20);
+			},
+		);
 
-		this.uiManager.showLevelUpModal([increaseHpButton]);
+		const increaseMoveSpeedButton = this.createLevelUpButton(
+			"⚡ Increase Move Speed (+15%)",
+			() => {
+				if (!this.player) return;
+				this.player.increaseSpeedMultiplier(0.15);
+			},
+		);
+
+		const increaseAttackSpeedButton = this.createLevelUpButton(
+			"🏹 Increase Attack Speed (+20%)",
+			() => {
+				if (!this.player) return;
+				this.player.increaseAttackSpeedMultiplier(0.2);
+			},
+		);
+
+		const increaseDamageButton = this.createLevelUpButton(
+			"💥 Increase Damage (+25%)",
+			() => {
+				if (!this.player) return;
+				this.player.increaseDamageMultiplier(0.25);
+			},
+		);
+
+		this.uiManager.showLevelUpModal([
+			increaseHpButton,
+			increaseMoveSpeedButton,
+			increaseAttackSpeedButton,
+			increaseDamageButton,
+		]);
 	}
 
 	private createLevelUpButton(

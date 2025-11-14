@@ -18,6 +18,8 @@ export class Player {
 	public acceleration: number = 40.0; // How fast we reach max speed (units/s²)
 	public deceleration: number = 30.0; // How fast we slow down when not moving (units/s²)
 	public speedMultiplier: number = 1.0; // Multiply speed for gameplay effects (buffs/debuffs)
+	public attackSpeedMultiplier: number = 1.0; // Scales weapon cooldowns (higher = faster)
+	public damageMultiplier: number = 1.0; // Boosts outgoing damage
 
 	// Health
 	public health: number = 100;
@@ -289,5 +291,41 @@ export class Player {
 		this.maxHealth += amount;
 		this.health = this.maxHealth;
 		console.log(`Max HP increased to ${this.maxHealth}`);
+	}
+
+	increaseSpeedMultiplier(amount: number): void {
+		this.speedMultiplier += amount;
+		console.log(
+			`Speed multiplier increased to ${this.speedMultiplier.toFixed(2)}x`,
+		);
+	}
+
+	increaseAttackSpeedMultiplier(amount: number): void {
+		this.attackSpeedMultiplier += amount;
+		console.log(
+			`Attack speed multiplier increased to ${this.attackSpeedMultiplier.toFixed(2)}x`,
+		);
+	}
+
+	increaseDamageMultiplier(amount: number): void {
+		this.damageMultiplier += amount;
+		console.log(
+			`Damage multiplier increased to ${this.damageMultiplier.toFixed(2)}x`,
+		);
+	}
+
+	getModifiedAttackCooldown(baseCooldown: number): number {
+		const multiplier = Math.max(this.attackSpeedMultiplier, 0.01);
+		return baseCooldown / multiplier;
+	}
+
+	getModifiedDamage(baseDamage: number): number {
+		return baseDamage * this.damageMultiplier;
+	}
+
+	resetStatMultipliers(): void {
+		this.speedMultiplier = 1.0;
+		this.attackSpeedMultiplier = 1.0;
+		this.damageMultiplier = 1.0;
 	}
 }

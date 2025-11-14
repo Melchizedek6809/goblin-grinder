@@ -8,8 +8,11 @@ import type { ParticleSystem } from "../vfx/ParticleSystem.ts";
 import { Weapon } from "./Weapon.ts";
 
 export class FireballWeapon extends Weapon {
-	private fireRate = 45; // Fire every 45 ticks (1.5 seconds at 30fps)
+	private baseFireRate = 45; // Fire every 45 ticks (1.5 seconds at 30fps)
+	private cooldownTimer = 0;
 	private maxRange = 8.0; // Maximum firing range
+	private baseDirectDamage = 25;
+	private baseExplosionDamage = 15;
 
 	update(
 		player: Player,
@@ -19,9 +22,10 @@ export class FireballWeapon extends Weapon {
 		spawnExplosion: (explosion: Explosion) => void,
 	): void {
 		this.incrementTick();
+		this.cooldownTimer -= 1;
 
 		// Check if it's time to fire
-		if (this.tickCounter % this.fireRate !== 0) {
+		if (this.cooldownTimer > 0) {
 			return;
 		}
 
@@ -55,6 +59,14 @@ export class FireballWeapon extends Weapon {
 			velocity,
 			particleSystem,
 			spawnExplosion,
+			player.getModifiedDamage(this.baseDirectDamage),
+			undefined,
+			player.getModifiedDamage(this.baseExplosionDamage),
+		);
+
+		this.cooldownTimer = Math.max(
+			1,
+			Math.round(player.getModifiedAttackCooldown(this.baseFireRate)),
 		);
 
 		spawnProjectile(fireball);
