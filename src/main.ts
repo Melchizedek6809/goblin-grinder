@@ -170,7 +170,16 @@ export class Game {
 	}
 
 	private initContext() {
-		this.gl = this.canvasElement.getContext("webgl2");
+		this.gl = this.canvasElement.getContext("webgl2", {
+			alpha: false,
+			antialias: false,
+			powerPreference: "high-performance"
+		});
+
+		if (!this.gl) {
+			console.error("WebGL2 not supported on this device");
+			alert("WebGL2 is not supported on this device. Please use a modern browser.");
+		}
 	}
 
 	/**
@@ -323,9 +332,17 @@ export class Game {
 	 * Start a new game
 	 */
 	private async startGame() {
-		await this.initScene();
-		this.gameState = GameState.PLAYING;
-		this.updateUIVisibility();
+		try {
+			console.log("Starting game...");
+			await this.initScene();
+			console.log("Scene initialized, changing to PLAYING state");
+			this.gameState = GameState.PLAYING;
+			this.updateUIVisibility();
+			console.log("Game started successfully");
+		} catch (error) {
+			console.error("Failed to start game:", error);
+			alert(`Failed to start game: ${error instanceof Error ? error.message : String(error)}`);
+		}
 	}
 
 	/**

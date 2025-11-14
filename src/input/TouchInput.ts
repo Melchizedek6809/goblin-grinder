@@ -22,10 +22,11 @@ export class TouchInput implements InputSource {
 	private readonly SWIPE_MAX_TIME = 300; // ms
 
 	constructor() {
-		window.addEventListener("touchstart", this.onTouchStart);
-		window.addEventListener("touchmove", this.onTouchMove);
-		window.addEventListener("touchend", this.onTouchEnd);
-		window.addEventListener("touchcancel", this.onTouchEnd);
+		// Use { passive: false } to allow preventDefault() on iOS Safari
+		window.addEventListener("touchstart", this.onTouchStart, { passive: false });
+		window.addEventListener("touchmove", this.onTouchMove, { passive: false });
+		window.addEventListener("touchend", this.onTouchEnd, { passive: false });
+		window.addEventListener("touchcancel", this.onTouchEnd, { passive: false });
 	}
 
 	private onTouchStart = (e: TouchEvent) => {
@@ -134,9 +135,10 @@ export class TouchInput implements InputSource {
 	}
 
 	destroy(): void {
-		window.removeEventListener("touchstart", this.onTouchStart);
-		window.removeEventListener("touchmove", this.onTouchMove);
-		window.removeEventListener("touchend", this.onTouchEnd);
-		window.removeEventListener("touchcancel", this.onTouchEnd);
+		// Must match the options used in addEventListener
+		window.removeEventListener("touchstart", this.onTouchStart, { passive: false } as any);
+		window.removeEventListener("touchmove", this.onTouchMove, { passive: false } as any);
+		window.removeEventListener("touchend", this.onTouchEnd, { passive: false } as any);
+		window.removeEventListener("touchcancel", this.onTouchEnd, { passive: false } as any);
 	}
 }
