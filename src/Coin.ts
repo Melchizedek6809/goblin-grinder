@@ -77,13 +77,22 @@ export class Coin extends Pickup {
 			if (this.particleTimer >= this.particleSpawnRate) {
 				this.particleTimer = 0;
 
+				// Scale particle spawn area based on coin amount
+				// Small stack (<5): 0.3, Medium (<10): 0.5, Large: 0.7
+				let spawnRadius = 0.3;
+				if (this.amount >= 10) {
+					spawnRadius = 0.7;
+				} else if (this.amount >= 5) {
+					spawnRadius = 0.5;
+				}
+
 				// Spawn 1-2 sparkle particles
 				const particleCount = Math.floor(Math.random() * 2) + 1;
 				for (let i = 0; i < particleCount; i++) {
-					// Random offset around the coin
-					const offsetX = (Math.random() - 0.5) * 0.3;
-					const offsetZ = (Math.random() - 0.5) * 0.3;
-					const offsetY = Math.random() * 0.2;
+					// Random offset around the coin (scaled by amount)
+					const offsetX = (Math.random() - 0.5) * spawnRadius;
+					const offsetZ = (Math.random() - 0.5) * spawnRadius;
+					const offsetY = Math.random() * 0.3;
 
 					const particlePos = vec3.fromValues(
 						this.position[0] + offsetX,
