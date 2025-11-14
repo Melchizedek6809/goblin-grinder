@@ -40,6 +40,30 @@ export class MainMenu extends LitElement {
 			margin-bottom: 20px;
 		}
 
+		@media (max-width: 650px) {
+			.title {
+				font-size: 40px;
+			}
+		}
+
+		@media (max-width: 550px) {
+			.title {
+				font-size: 34px;
+			}
+		}
+
+		@media (max-width: 450px) {
+			.title {
+				font-size: 28px;
+			}
+		}
+
+		@media (max-width: 400px) {
+			.title {
+				font-size: 24px;
+			}
+		}
+
 		.button {
 			font-family: monospace;
 			font-size: 24px;
@@ -82,12 +106,12 @@ export class MainMenu extends LitElement {
 
 		return html`
 			<div class="overlay">
-				<div class="title">GOBLIN GRINDER</div>
+				<div class="title">🪓 Goblin Grinder 🗡️</div>
 				<button
 					class="button"
 					@click=${this.handleStartGame}
 					@touchend=${this.handleStartGame}
-				>Start Game</button>
+				>⚡ Start Game</button>
 			</div>
 		`;
 	}

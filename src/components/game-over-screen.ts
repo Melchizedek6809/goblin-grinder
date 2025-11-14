@@ -93,6 +93,12 @@ export class GameOverScreen extends LitElement {
 		.button.primary:active {
 			background-color: #ee5522;
 		}
+
+		@media (max-width: 550px) {
+			.buttons {
+				flex-direction: column;
+			}
+		}
 	`;
 
 	private handleRestart() {
@@ -114,11 +120,11 @@ export class GameOverScreen extends LitElement {
 
 		return html`
 			<div class="overlay">
-				<div class="title">GAME OVER</div>
+				<div class="title">🪦 YOU DIED 🪦</div>
 				<div class="score-text">Final Score: ${this.score}</div>
 				<div class="buttons">
-					<button class="button" @click=${this.handleBackToMenu}>Back to Menu</button>
-					<button class="button primary" @click=${this.handleRestart}>Restart</button>
+					<button class="button" @click=${this.handleBackToMenu}>🏠 Back to Menu</button>
+					<button class="button primary" @click=${this.handleRestart}>🔥 Restart</button>
 				</div>
 			</div>
 		`;
