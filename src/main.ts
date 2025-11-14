@@ -1,43 +1,42 @@
 import { vec3 } from "gl-matrix";
 import { Camera } from "./Camera.ts";
+import type { FpsDisplay } from "./components/fps-display.ts";
+import type { GameOverScreen } from "./components/game-over-screen.ts";
+// Import UI components
+import type { HealthDisplay } from "./components/health-display.ts";
+import type { MainMenu } from "./components/main-menu.ts";
+import type { ScoreDisplay } from "./components/score-display.ts";
 import { DebugRenderer } from "./DebugRenderer.ts";
-import { Enemy } from "./Enemy.ts";
+import type { Enemy } from "./Enemy.ts";
 import { Entity } from "./Entity.ts";
+import type { Explosion } from "./Explosion.ts";
+import { CompositeInput } from "./input/CompositeInput.ts";
+import type { InputSource } from "./input/InputSource.ts";
+import { KeyboardInput } from "./input/KeyboardInput.ts";
+import { MouseInput } from "./input/MouseInput.ts";
+import { TouchInput } from "./input/TouchInput.ts";
 import { Light } from "./Light.ts";
 import { Mesh } from "./Mesh.ts";
 import { MeshAtlas } from "./MeshAtlas.ts";
 import { NoiseTexture } from "./NoiseTexture.ts";
+import { ParticleSystem } from "./ParticleSystem.ts";
 import { Player } from "./Player.ts";
+import type { Projectile } from "./Projectile.ts";
+import { createSphereCollider } from "./physics/Collider.ts";
+import { Physics } from "./physics/Physics.ts";
 import type { Renderable } from "./Renderable.ts";
 import { Shader } from "./Shader.ts";
 import { SpawnManager } from "./SpawnManager.ts";
 import { StaticBush } from "./StaticBush.ts";
 import { StaticRock } from "./StaticRock.ts";
 import { StaticTree } from "./StaticTree.ts";
-import { KeyboardInput } from "./input/KeyboardInput.ts";
-import { MouseInput } from "./input/MouseInput.ts";
-import { TouchInput } from "./input/TouchInput.ts";
-import { CompositeInput } from "./input/CompositeInput.ts";
-import type { InputSource } from "./input/InputSource.ts";
-import { createSphereCollider } from "./physics/Collider.ts";
-import { Physics } from "./physics/Physics.ts";
 import fragmentShaderSource from "./shaders/basic.frag?raw";
 import vertexShaderSource from "./shaders/basic.vert?raw";
 import depthFragmentShaderSource from "./shaders/depth.frag?raw";
 import depthVertexShaderSource from "./shaders/depth.vert?raw";
-import particleVertexShaderSource from "./shaders/particle.vert?raw";
 import particleFragmentShaderSource from "./shaders/particle.frag?raw";
-import { ParticleSystem } from "./ParticleSystem.ts";
-import type { Projectile } from "./Projectile.ts";
-import type { Explosion } from "./Explosion.ts";
+import particleVertexShaderSource from "./shaders/particle.vert?raw";
 import { FireballWeapon } from "./weapons/FireballWeapon.ts";
-
-// Import UI components
-import type { HealthDisplay } from "./components/health-display.ts";
-import type { FpsDisplay } from "./components/fps-display.ts";
-import type { ScoreDisplay } from "./components/score-display.ts";
-import type { MainMenu } from "./components/main-menu.ts";
-import type { GameOverScreen } from "./components/game-over-screen.ts";
 import "./components/health-display.ts";
 import "./components/fps-display.ts";
 import "./components/score-display.ts";
@@ -124,8 +123,12 @@ export class Game {
 
 			// Set up menu event listeners
 			this.mainMenu?.addEventListener("start-game", () => this.startGame());
-			this.gameOverScreen?.addEventListener("restart-game", () => this.restartGame());
-			this.gameOverScreen?.addEventListener("back-to-menu", () => this.backToMenu());
+			this.gameOverScreen?.addEventListener("restart-game", () =>
+				this.restartGame(),
+			);
+			this.gameOverScreen?.addEventListener("back-to-menu", () =>
+				this.backToMenu(),
+			);
 
 			// Check for skipMenu URL parameter
 			const urlParams = new URLSearchParams(window.location.search);
@@ -172,12 +175,14 @@ export class Game {
 		this.gl = this.canvasElement.getContext("webgl2", {
 			alpha: false,
 			antialias: false,
-			powerPreference: "high-performance"
+			powerPreference: "high-performance",
 		});
 
 		if (!this.gl) {
 			console.error("WebGL2 not supported on this device");
-			alert("WebGL2 is not supported on this device. Please use a modern browser.");
+			alert(
+				"WebGL2 is not supported on this device. Please use a modern browser.",
+			);
 		}
 	}
 
@@ -295,36 +300,65 @@ export class Game {
 		this.player.weapons.push(new FireballWeapon());
 
 		// Spawn initial enemies
-		this.spawnManager.spawnEnemy(atlas, 5, -0.5, 5, this.entities, this.enemies);
-		this.spawnManager.spawnEnemy(atlas, -5, -0.5, -5, this.entities, this.enemies);
+		this.spawnManager.spawnEnemy(
+			atlas,
+			5,
+			-0.5,
+			5,
+			this.entities,
+			this.enemies,
+		);
+		this.spawnManager.spawnEnemy(
+			atlas,
+			-5,
+			-0.5,
+			-5,
+			this.entities,
+			this.enemies,
+		);
 
 		// Spawn static objects
-		this.spawnManager.spawnStaticObjects(() => new StaticTree(atlas.getRandomTree()), 30, {
-			yOffset: -0.6,
-			minDistance: 5,
-			maxDistance: 35,
-			minScale: 0.8,
-			maxScale: 1.2,
-			colliderRadius: 0.5, // Trees have collision
-		}, this.entities);
+		this.spawnManager.spawnStaticObjects(
+			() => new StaticTree(atlas.getRandomTree()),
+			30,
+			{
+				yOffset: -0.6,
+				minDistance: 5,
+				maxDistance: 35,
+				minScale: 0.8,
+				maxScale: 1.2,
+				colliderRadius: 0.5, // Trees have collision
+			},
+			this.entities,
+		);
 
-		this.spawnManager.spawnStaticObjects(() => new StaticRock(atlas.getRandomRock()), 20, {
-			yOffset: -0.5,
-			minDistance: 3,
-			maxDistance: 33,
-			minScale: 0.6,
-			maxScale: 1.4,
-			colliderRadius: 0.6, // Rocks have collision
-		}, this.entities);
+		this.spawnManager.spawnStaticObjects(
+			() => new StaticRock(atlas.getRandomRock()),
+			20,
+			{
+				yOffset: -0.5,
+				minDistance: 3,
+				maxDistance: 33,
+				minScale: 0.6,
+				maxScale: 1.4,
+				colliderRadius: 0.6, // Rocks have collision
+			},
+			this.entities,
+		);
 
-		this.spawnManager.spawnStaticObjects(() => new StaticBush(atlas.getRandomBush()), 25, {
-			yOffset: -0.4,
-			minDistance: 3,
-			maxDistance: 33,
-			minScale: 0.7,
-			maxScale: 1.3,
-			// No collider - bushes are passable
-		}, this.entities);
+		this.spawnManager.spawnStaticObjects(
+			() => new StaticBush(atlas.getRandomBush()),
+			25,
+			{
+				yOffset: -0.4,
+				minDistance: 3,
+				maxDistance: 33,
+				minScale: 0.7,
+				maxScale: 1.3,
+				// No collider - bushes are passable
+			},
+			this.entities,
+		);
 	}
 
 	/**
@@ -337,7 +371,9 @@ export class Game {
 			this.updateUIVisibility();
 		} catch (error) {
 			console.error("Failed to start game:", error);
-			alert(`Failed to start game: ${error instanceof Error ? error.message : String(error)}`);
+			alert(
+				`Failed to start game: ${error instanceof Error ? error.message : String(error)}`,
+			);
 		}
 	}
 
@@ -362,7 +398,12 @@ export class Game {
 	 * Update UI element visibility based on game state
 	 */
 	private updateUIVisibility() {
-		if (!this.mainMenu || !this.gameOverScreen || !this.healthDisplay || !this.scoreDisplay) {
+		if (
+			!this.mainMenu ||
+			!this.gameOverScreen ||
+			!this.healthDisplay ||
+			!this.scoreDisplay
+		) {
 			return;
 		}
 
@@ -390,7 +431,8 @@ export class Game {
 	}
 
 	private updateCamera(deltaTime: number) {
-		if (!this.camera || !this.player || this.gameState !== GameState.PLAYING) return;
+		if (!this.camera || !this.player || this.gameState !== GameState.PLAYING)
+			return;
 
 		// Poll input state
 		const input = this.inputSource.poll(this.camera.getAngle());
@@ -523,7 +565,11 @@ export class Game {
 		}
 
 		// Check for game over condition
-		if (this.gameState === GameState.PLAYING && this.player && this.player.health <= 0) {
+		if (
+			this.gameState === GameState.PLAYING &&
+			this.player &&
+			this.player.health <= 0
+		) {
 			this.gameState = GameState.GAME_OVER;
 			this.updateUIVisibility();
 		}
@@ -635,7 +681,11 @@ export class Game {
 		}
 
 		// Update enemy AI (continues during game over)
-		if ((this.gameState === GameState.PLAYING || this.gameState === GameState.GAME_OVER) && this.player) {
+		if (
+			(this.gameState === GameState.PLAYING ||
+				this.gameState === GameState.GAME_OVER) &&
+			this.player
+		) {
 			for (const enemy of this.enemies) {
 				enemy.update(this.player);
 			}
@@ -647,7 +697,10 @@ export class Game {
 	 */
 	private applyMovement(deltaTime: number) {
 		// Apply enemy movement with physics (continues during game over)
-		if (this.gameState === GameState.PLAYING || this.gameState === GameState.GAME_OVER) {
+		if (
+			this.gameState === GameState.PLAYING ||
+			this.gameState === GameState.GAME_OVER
+		) {
 			for (const enemy of this.enemies) {
 				enemy.applyMovement(deltaTime, this.physics);
 			}

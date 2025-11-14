@@ -51,8 +51,8 @@ export class NoiseTexture {
 		for (let y = 0; y < newSize; y++) {
 			for (let x = 0; x < newSize; x++) {
 				// Determine source coordinates with mirroring
-				let srcX = x < size ? x : size * 2 - x - 1; // Mirror horizontally
-				let srcY = y < size ? y : size * 2 - y - 1; // Mirror vertically
+				const srcX = x < size ? x : size * 2 - x - 1; // Mirror horizontally
+				const srcY = y < size ? y : size * 2 - y - 1; // Mirror vertically
 
 				// Copy value from source
 				mirrored[y * newSize + x] = data[srcY * size + srcX];
@@ -81,7 +81,8 @@ export class NoiseTexture {
 
 				// 4 octaves for detail
 				for (let octave = 0; octave < 4; octave++) {
-					noise += this.simplexNoise(u * frequency * 8, v * frequency * 8) * amplitude;
+					noise +=
+						this.simplexNoise(u * frequency * 8, v * frequency * 8) * amplitude;
 					maxValue += amplitude;
 					amplitude *= 0.5;
 					frequency *= 2.0;

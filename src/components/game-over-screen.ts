@@ -1,4 +1,4 @@
-import { LitElement, css, html } from "lit";
+import { css, html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
 @customElement("game-over-screen")
@@ -96,11 +96,15 @@ export class GameOverScreen extends LitElement {
 	`;
 
 	private handleRestart() {
-		this.dispatchEvent(new CustomEvent("restart-game", { bubbles: true, composed: true }));
+		this.dispatchEvent(
+			new CustomEvent("restart-game", { bubbles: true, composed: true }),
+		);
 	}
 
 	private handleBackToMenu() {
-		this.dispatchEvent(new CustomEvent("back-to-menu", { bubbles: true, composed: true }));
+		this.dispatchEvent(
+			new CustomEvent("back-to-menu", { bubbles: true, composed: true }),
+		);
 	}
 
 	render() {

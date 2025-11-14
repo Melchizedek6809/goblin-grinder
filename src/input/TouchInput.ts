@@ -23,14 +23,25 @@ export class TouchInput implements InputSource {
 
 	constructor() {
 		// Use { passive: false } to allow preventDefault() on iOS Safari
-		window.addEventListener("touchstart", this.onTouchStart, { passive: false });
+		window.addEventListener("touchstart", this.onTouchStart, {
+			passive: false,
+		});
 		window.addEventListener("touchmove", this.onTouchMove, { passive: false });
 		window.addEventListener("touchend", this.onTouchEnd, { passive: false });
 		window.addEventListener("touchcancel", this.onTouchEnd, { passive: false });
 	}
 
-	private readonly interactiveTags = new Set(["BUTTON", "A", "INPUT", "SELECT", "TEXTAREA"]);
-	private readonly interactiveHosts = new Set(["MAIN-MENU", "GAME-OVER-SCREEN"]);
+	private readonly interactiveTags = new Set([
+		"BUTTON",
+		"A",
+		"INPUT",
+		"SELECT",
+		"TEXTAREA",
+	]);
+	private readonly interactiveHosts = new Set([
+		"MAIN-MENU",
+		"GAME-OVER-SCREEN",
+	]);
 
 	private shouldAllowDefaultBehavior = (e: TouchEvent): boolean => {
 		const path = typeof e.composedPath === "function" ? e.composedPath() : [];
@@ -112,7 +123,10 @@ export class TouchInput implements InputSource {
 			const swipeTime = Date.now() - this.swipeStartTime;
 
 			// Quick horizontal swipe = rotation
-			if (swipeTime < this.SWIPE_MAX_TIME && Math.abs(swipeDistance) > this.SWIPE_MIN_DISTANCE) {
+			if (
+				swipeTime < this.SWIPE_MAX_TIME &&
+				Math.abs(swipeDistance) > this.SWIPE_MIN_DISTANCE
+			) {
 				if (swipeDistance > 0) {
 					// Swipe right = rotate camera right
 					this.rotateRightTriggered = true;
@@ -156,12 +170,16 @@ export class TouchInput implements InputSource {
 				// Rotate 90 degrees counter-clockwise to align with game axes
 				// This makes: top=W, bottom=S, left=A, right=D
 				const screenMoveX = -screenY; // Screen up/down becomes left/right movement
-				const screenMoveY = screenX;   // Screen left/right becomes up/down movement
+				const screenMoveY = screenX; // Screen left/right becomes up/down movement
 
 				// Apply camera rotation to transform screen space to world space
 				// This matches keyboard movement (W/S/A/D relative to camera)
-				moveX = screenMoveX * Math.cos(cameraAngle) + screenMoveY * Math.sin(cameraAngle);
-				moveZ = screenMoveX * Math.sin(cameraAngle) - screenMoveY * Math.cos(cameraAngle);
+				moveX =
+					screenMoveX * Math.cos(cameraAngle) +
+					screenMoveY * Math.sin(cameraAngle);
+				moveZ =
+					screenMoveX * Math.sin(cameraAngle) -
+					screenMoveY * Math.cos(cameraAngle);
 			}
 		}
 
@@ -182,9 +200,17 @@ export class TouchInput implements InputSource {
 
 	destroy(): void {
 		// Must match the options used in addEventListener
-		window.removeEventListener("touchstart", this.onTouchStart, { passive: false } as any);
-		window.removeEventListener("touchmove", this.onTouchMove, { passive: false } as any);
-		window.removeEventListener("touchend", this.onTouchEnd, { passive: false } as any);
-		window.removeEventListener("touchcancel", this.onTouchEnd, { passive: false } as any);
+		window.removeEventListener("touchstart", this.onTouchStart, {
+			passive: false,
+		} as any);
+		window.removeEventListener("touchmove", this.onTouchMove, {
+			passive: false,
+		} as any);
+		window.removeEventListener("touchend", this.onTouchEnd, {
+			passive: false,
+		} as any);
+		window.removeEventListener("touchcancel", this.onTouchEnd, {
+			passive: false,
+		} as any);
 	}
 }

@@ -1,4 +1,4 @@
-import { LitElement, css, html } from "lit";
+import { css, html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
 @customElement("main-menu")
@@ -70,7 +70,9 @@ export class MainMenu extends LitElement {
 	private handleStartGame(e: Event) {
 		// Prevent default to avoid double-firing on mobile
 		e.preventDefault();
-		this.dispatchEvent(new CustomEvent("start-game", { bubbles: true, composed: true }));
+		this.dispatchEvent(
+			new CustomEvent("start-game", { bubbles: true, composed: true }),
+		);
 	}
 
 	render() {

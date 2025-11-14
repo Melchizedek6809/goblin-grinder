@@ -1,10 +1,10 @@
 import { Enemy } from "./Enemy.ts";
-import { MeshAtlas } from "./MeshAtlas.ts";
-import type { Renderable } from "./Renderable.ts";
-import type { StaticObject } from "./StaticObject.ts";
+import type { MeshAtlas } from "./MeshAtlas.ts";
+import type { Player } from "./Player.ts";
 import { createSphereCollider } from "./physics/Collider.ts";
 import type { Physics } from "./physics/Physics.ts";
-import type { Player } from "./Player.ts";
+import type { Renderable } from "./Renderable.ts";
+import type { StaticObject } from "./StaticObject.ts";
 
 /**
  * Manages spawning of enemies and static objects
@@ -35,7 +35,10 @@ export class SpawnManager {
 
 		this.enemySpawnTimer += deltaTime;
 
-		if (this.enemySpawnTimer >= this.enemySpawnInterval && enemies.length < this.maxEnemies) {
+		if (
+			this.enemySpawnTimer >= this.enemySpawnInterval &&
+			enemies.length < this.maxEnemies
+		) {
 			this.enemySpawnTimer = 0;
 
 			// Determine group size (1-3 enemies)
@@ -52,7 +55,9 @@ export class SpawnManager {
 			const spawnZ = playerPos[2] + Math.sin(angle) * distance;
 
 			this.spawnEnemyGroup(atlas, spawnX, spawnZ, groupSize, entities, enemies);
-			console.log(`Spawned ${groupSize} enemies at distance ${distance.toFixed(1)}`);
+			console.log(
+				`Spawned ${groupSize} enemies at distance ${distance.toFixed(1)}`,
+			);
 		}
 	}
 

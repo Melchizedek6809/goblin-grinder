@@ -1,8 +1,5 @@
 import { vec3 } from "gl-matrix";
-import type {
-	Collider,
-	SphereCollider,
-} from "./Collider.ts";
+import type { Collider, SphereCollider } from "./Collider.ts";
 import { shouldCollide } from "./Collider.ts";
 
 /**
@@ -41,10 +38,7 @@ export class Physics {
 	/**
 	 * Check if two sphere colliders intersect
 	 */
-	private checkSphereSphere(
-		a: SphereCollider,
-		b: SphereCollider,
-	): boolean {
+	private checkSphereSphere(a: SphereCollider, b: SphereCollider): boolean {
 		const dx = a.center[0] - b.center[0];
 		const dy = a.center[1] - b.center[1];
 		const dz = a.center[2] - b.center[2];

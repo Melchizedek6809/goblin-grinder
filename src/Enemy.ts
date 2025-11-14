@@ -18,6 +18,14 @@ export class Enemy {
 	public state: EnemyState = "idle";
 	private attackTimer: number = 0; // Counts fixed update ticks during attack
 
+	// Jump mechanics
+	private isJumping: boolean = false;
+	private jumpVelocity: number = 0; // Current vertical velocity
+	private readonly jumpSpeed: number = 4.0; // Initial upward velocity when jumping
+	private readonly gravity: number = 12.0; // Gravity constant (units/s²)
+	private readonly groundY: number = -0.5; // Default ground level for enemies
+	private jumpChance: number = 0.2; // 20% chance to jump on idle->chase transition
+
 	// Health system
 	public health: number = 50;
 	public maxHealth: number = 50;
@@ -83,7 +91,9 @@ export class Enemy {
 		if (this.state === "death") return; // Already dead
 
 		this.health -= amount;
-		console.log(`Enemy took ${amount} damage, health: ${this.health}/${this.maxHealth}`);
+		console.log(
+			`Enemy took ${amount} damage, health: ${this.health}/${this.maxHealth}`,
+		);
 
 		if (this.health <= 0) {
 			this.health = 0;
@@ -93,6 +103,21 @@ export class Enemy {
 			vec3.set(this.velocity, 0, 0, 0);
 			console.log("Enemy died!");
 		}
+	}
+
+	/**
+	 * Apply knockback force to this enemy
+	 * @param direction Normalized direction vector for knockback
+	 * @param force Knockback force magnitude
+	 */
+	applyKnockback(direction: vec3, force: number): void {
+		// Don't apply knockback to dead enemies
+		if (this.state === "death") return;
+
+		// Apply knockback by directly modifying velocity (instantaneous push)
+		// Only apply horizontal knockback (X and Z), not vertical
+		this.velocity[0] += direction[0] * force;
+		this.velocity[2] += direction[2] * force;
 	}
 
 	/**
@@ -121,10 +146,19 @@ export class Enemy {
 			case "idle":
 				// Transition: idle -> chase (player gets close)
 				if (distanceToPlayer < this.chaseStartRange) {
-					this.state = "chase";
+					// 20% chance to jump first before chasing
+					if (Math.random() < this.jumpChance) {
+						this.isJumping = true;
+						this.jumpVelocity = this.jumpSpeed;
+						vec3.set(this.goalVelocity, 0, 0, 0); // Don't move horizontally while jumping
+					} else {
+						this.state = "chase";
+					}
 				}
 				// Idle: no movement
-				vec3.set(this.goalVelocity, 0, 0, 0);
+				if (!this.isJumping) {
+					vec3.set(this.goalVelocity, 0, 0, 0);
+				}
 				break;
 
 			case "chase":
@@ -193,6 +227,28 @@ export class Enemy {
 			this.position[1] -= this.sinkSpeed * deltaTime;
 
 			// Update entity transforms
+			this.updateEntities();
+			return;
+		}
+
+		// Handle jump physics
+		if (this.isJumping) {
+			// Apply jump velocity to vertical position
+			this.position[1] += this.jumpVelocity * deltaTime;
+
+			// Apply gravity to jump velocity
+			this.jumpVelocity -= this.gravity * deltaTime;
+
+			// Check if we've landed (back on or below ground level)
+			if (this.position[1] <= this.groundY) {
+				this.position[1] = this.groundY;
+				this.jumpVelocity = 0;
+				this.isJumping = false;
+				// Transition to chase state after landing
+				this.state = "chase";
+			}
+
+			// Update entity transforms and return (no horizontal movement while jumping)
 			this.updateEntities();
 			return;
 		}

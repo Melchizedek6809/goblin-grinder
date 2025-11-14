@@ -55,7 +55,8 @@ export class Player {
 		} else {
 			// No input - apply deceleration (friction)
 			const currentSpeed = Math.sqrt(
-				this.velocity[0] * this.velocity[0] + this.velocity[2] * this.velocity[2],
+				this.velocity[0] * this.velocity[0] +
+					this.velocity[2] * this.velocity[2],
 			);
 
 			if (currentSpeed > 0.01) {
@@ -163,6 +164,8 @@ export class Player {
 	 */
 	takeDamage(amount: number): void {
 		this.health = Math.max(0, this.health - amount);
-		console.log(`Player took ${amount} damage. Health: ${this.health}/${this.maxHealth}`);
+		console.log(
+			`Player took ${amount} damage. Health: ${this.health}/${this.maxHealth}`,
+		);
 	}
 }

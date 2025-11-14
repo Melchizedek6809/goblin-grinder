@@ -1,8 +1,8 @@
-import type { Player } from "./Player";
 import type { Enemy } from "./Enemy";
-import type { Projectile } from "./Projectile";
-import type { ParticleSystem } from "./ParticleSystem";
 import type { Explosion } from "./Explosion";
+import type { ParticleSystem } from "./ParticleSystem";
+import type { Player } from "./Player";
+import type { Projectile } from "./Projectile";
 
 export abstract class Weapon {
 	protected tickCounter = 0;

@@ -171,7 +171,12 @@ export class Light {
 	/**
 	 * Follow a target position (e.g., the player) while maintaining relative offset
 	 */
-	followTarget(targetPos: vec3, offsetX: number, offsetY: number, offsetZ: number): void {
+	followTarget(
+		targetPos: vec3,
+		offsetX: number,
+		offsetY: number,
+		offsetZ: number,
+	): void {
 		// Set light target to the follow target
 		vec3.copy(this.target, targetPos);
 

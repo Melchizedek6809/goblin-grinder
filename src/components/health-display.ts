@@ -1,4 +1,4 @@
-import { LitElement, css, html } from "lit";
+import { css, html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
 @customElement("health-display")
@@ -52,7 +52,7 @@ export class HealthDisplay extends LitElement {
 		const hearts = [];
 		const totalHearts = Math.ceil(this.maxHealth / 20);
 		const fullHearts = Math.floor(this.health / 20);
-		const hasHalfHeart = (this.health % 20) >= 10;
+		const hasHalfHeart = this.health % 20 >= 10;
 
 		// Full hearts
 		for (let i = 0; i < fullHearts; i++) {

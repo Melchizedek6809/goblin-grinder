@@ -18,7 +18,11 @@ export class DebugRenderer {
 
 	constructor(gl: WebGL2RenderingContext) {
 		this.gl = gl;
-		this.shader = new Shader(gl, debugVertexShaderSource, debugFragmentShaderSource);
+		this.shader = new Shader(
+			gl,
+			debugVertexShaderSource,
+			debugFragmentShaderSource,
+		);
 
 		// Create wireframe sphere mesh
 		const sphereData = this.createWireframeSphere(1.0, 16, 8);
@@ -112,10 +116,7 @@ export class DebugRenderer {
 	/**
 	 * Render a single sphere collider as wireframe
 	 */
-	private renderSphereCollider(
-		collider: SphereCollider,
-		color: vec3,
-	): void {
+	private renderSphereCollider(collider: SphereCollider, color: vec3): void {
 		const gl = this.gl;
 
 		// Create model matrix (translate + scale)

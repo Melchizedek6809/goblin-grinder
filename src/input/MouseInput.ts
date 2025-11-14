@@ -66,12 +66,16 @@ export class MouseInput implements InputSource {
 				// Rotate 90 degrees counter-clockwise to align with game axes
 				// This makes: top=W, bottom=S, left=A, right=D
 				const screenMoveX = -screenY; // Screen up/down becomes left/right movement
-				const screenMoveY = screenX;   // Screen left/right becomes up/down movement
+				const screenMoveY = screenX; // Screen left/right becomes up/down movement
 
 				// Apply camera rotation to transform screen space to world space
 				// This matches keyboard movement (W/S/A/D relative to camera)
-				moveX = screenMoveX * Math.cos(cameraAngle) + screenMoveY * Math.sin(cameraAngle);
-				moveZ = screenMoveX * Math.sin(cameraAngle) - screenMoveY * Math.cos(cameraAngle);
+				moveX =
+					screenMoveX * Math.cos(cameraAngle) +
+					screenMoveY * Math.sin(cameraAngle);
+				moveZ =
+					screenMoveX * Math.sin(cameraAngle) -
+					screenMoveY * Math.cos(cameraAngle);
 			}
 		}
 

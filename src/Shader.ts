@@ -3,7 +3,8 @@ import type { mat4, vec3 } from "gl-matrix";
 export class Shader {
 	public program: WebGLProgram;
 	private gl: WebGL2RenderingContext;
-	private uniformLocations: Map<string, WebGLUniformLocation | null> = new Map();
+	private uniformLocations: Map<string, WebGLUniformLocation | null> =
+		new Map();
 	private attributeLocations: Map<string, number> = new Map();
 
 	constructor(

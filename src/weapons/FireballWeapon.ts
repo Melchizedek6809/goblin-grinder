@@ -1,11 +1,11 @@
 import { vec3 } from "gl-matrix";
-import { Weapon } from "../Weapon";
-import type { Player } from "../Player";
 import type { Enemy } from "../Enemy";
-import type { Projectile } from "../Projectile";
-import type { ParticleSystem } from "../ParticleSystem";
 import type { Explosion } from "../Explosion";
 import { Fireball } from "../Fireball";
+import type { ParticleSystem } from "../ParticleSystem";
+import type { Player } from "../Player";
+import type { Projectile } from "../Projectile";
+import { Weapon } from "../Weapon";
 
 export class FireballWeapon extends Weapon {
 	private fireRate = 45; // Fire every 45 ticks (1.5 seconds at 30fps)

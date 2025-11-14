@@ -1,6 +1,6 @@
 import { type mat4, vec3 } from "gl-matrix";
 import { Particle } from "./Particle";
-import { Shader } from "./Shader";
+import type { Shader } from "./Shader";
 
 export class ParticleSystem {
 	private particles: Particle[] = [];
@@ -17,11 +17,7 @@ export class ParticleSystem {
 	private colors: Float32Array;
 	private sizes: Float32Array;
 
-	constructor(
-		gl: WebGL2RenderingContext,
-		shader: Shader,
-		maxParticles = 1000,
-	) {
+	constructor(gl: WebGL2RenderingContext, shader: Shader, maxParticles = 1000) {
 		this.gl = gl;
 		this.shader = shader;
 		this.maxParticles = maxParticles;
@@ -85,10 +81,11 @@ export class ParticleSystem {
 		speedRange: [number, number],
 		sizeRange: [number, number],
 		lifetimeRange: [number, number],
-		color: vec3,
+		colors: vec3[],
 		gravity = 0.0,
 	): void {
 		for (let i = 0; i < count; i++) {
+			const color = colors[Math.floor(Math.random() * colors.length)];
 			// Random direction
 			const theta = Math.random() * Math.PI * 2;
 			const phi = Math.random() * Math.PI;
@@ -103,9 +100,12 @@ export class ParticleSystem {
 
 			const size = sizeRange[0] + Math.random() * (sizeRange[1] - sizeRange[0]);
 			const lifetime =
-				lifetimeRange[0] + Math.random() * (lifetimeRange[1] - lifetimeRange[0]);
+				lifetimeRange[0] +
+				Math.random() * (lifetimeRange[1] - lifetimeRange[0]);
 
-			this.spawn(new Particle(position, velocity, color, size, lifetime, gravity));
+			this.spawn(
+				new Particle(position, velocity, color, size, lifetime, gravity),
+			);
 		}
 	}
 

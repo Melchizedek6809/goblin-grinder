@@ -1,9 +1,9 @@
 import { vec3 } from "gl-matrix";
-import { Projectile } from "./Projectile";
-import { Particle } from "./Particle";
-import { Explosion } from "./Explosion";
 import type { Enemy } from "./Enemy";
+import { Explosion } from "./Explosion";
+import { Particle } from "./Particle";
 import type { ParticleSystem } from "./ParticleSystem";
+import { Projectile } from "./Projectile";
 
 export class Fireball extends Projectile {
 	private particleSystem: ParticleSystem;
@@ -77,8 +77,8 @@ export class Fireball extends Projectile {
 				vec3.fromValues(1.0, 0.8, 0.2), // Yellow-orange
 			];
 
-			// Spawn multiple particles per frame for a more intense effect
-			for (let i = 0; i < 4; i++) {
+			// Spawn multiple fire particles per frame for a more intense effect
+			for (let i = 0; i < 3; i++) {
 				const color = colors[Math.floor(Math.random() * colors.length)];
 
 				// Spawn particles with slight random offset for cluster effect
@@ -92,9 +92,9 @@ export class Fireball extends Projectile {
 
 				// Small random velocity (particles trail behind)
 				const particleVel = vec3.fromValues(
+					(Math.random() - 0.5) * 0.7,
 					(Math.random() - 0.5) * 0.5,
-					(Math.random() - 0.5) * 0.5,
-					(Math.random() - 0.5) * 0.5,
+					(Math.random() - 0.5) * 0.7,
 				);
 
 				this.particleSystem.spawn(
@@ -102,9 +102,45 @@ export class Fireball extends Projectile {
 						particlePos,
 						particleVel,
 						color,
-						15.0 + Math.random() * 10.0, // size 15-25
-						0.3 + Math.random() * 0.2, // lifetime 0.3-0.5s
+						18.0 + Math.random() * 8.0, // size 15-25
+						0.2 + Math.random() * 0.2, // lifetime 0.3-0.5s
 						2.0, // slight gravity
+					),
+				);
+			}
+
+			// Spawn smoke particles (fewer, larger, slower)
+			for (let i = 0; i < 2; i++) {
+				// Spawn with slight random offset
+				const offset = vec3.fromValues(
+					(Math.random() - 0.5) * 0.15,
+					(Math.random() - 0.5) * 0.15,
+					(Math.random() - 0.5) * 0.15,
+				);
+				const particlePos = vec3.create();
+				vec3.add(particlePos, this.position, offset);
+
+				// Slow upward velocity with slight random drift
+				const particleVel = vec3.fromValues(
+					(Math.random() - 0.5) * 0.3,
+					0.3 + Math.random() * 0.3, // Upward velocity
+					(Math.random() - 0.5) * 0.3,
+				);
+
+				// Smoke colors: start dark gray, fade to light gray
+				const startColor = vec3.fromValues(0.3, 0.3, 0.3); // Dark gray
+				const endColor = vec3.fromValues(0.6, 0.6, 0.6); // Light gray
+
+				this.particleSystem.spawn(
+					new Particle(
+						particlePos,
+						particleVel,
+						startColor,
+						1.0 + Math.random() * 4.0, // start size 10-15
+						0.6 + Math.random() * 0.6, // lifetime 0.6-0.9s (longer than fire)
+						-1.0, // negative gravity (rises up)
+						endColor, // fade to lighter color
+						25.0 + Math.random() * 10.0, // end size 25-35 (grows larger)
 					),
 				);
 			}

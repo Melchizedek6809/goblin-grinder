@@ -246,7 +246,11 @@ export class Camera {
 
 			// Frustum culling - calculate bounding radius from entity scale
 			// Approximate bounding sphere radius (assumes mesh fits in a unit cube)
-			const maxScale = Math.max(entity.scale[0], entity.scale[1], entity.scale[2]);
+			const maxScale = Math.max(
+				entity.scale[0],
+				entity.scale[1],
+				entity.scale[2],
+			);
 			const boundingRadius = maxScale * 1.0; // Base radius of 1.0 for unit-sized meshes
 
 			// Skip entities outside visible area

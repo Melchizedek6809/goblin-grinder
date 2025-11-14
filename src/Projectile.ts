@@ -8,11 +8,7 @@ export abstract class Projectile {
 	maxLifetime: number;
 	isAlive = true;
 
-	constructor(
-		position: vec3,
-		velocity: vec3,
-		lifetime: number,
-	) {
+	constructor(position: vec3, velocity: vec3, lifetime: number) {
 		this.position = vec3.clone(position);
 		this.velocity = vec3.clone(velocity);
 		this.lifetime = lifetime;

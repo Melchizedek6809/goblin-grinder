@@ -5,13 +5,13 @@ import bush2FGlbUrl from "./assets/models/Bush2F.glb?url";
 // Note: ?url suffix tells Vite to treat these as URL assets
 import mageGlbUrl from "./assets/models/Mage.glb?url";
 import magePngUrl from "./assets/models/Mage.png";
-import skeletonGlbUrl from "./assets/models/Skeleton.glb?url";
-import skeletonPngUrl from "./assets/models/Skeleton.png";
 import naturePngUrl from "./assets/models/Nature.png";
 import rock1AGlbUrl from "./assets/models/Rock1A.glb?url";
 import rock1DGlbUrl from "./assets/models/Rock1D.glb?url";
 import rock1FGlbUrl from "./assets/models/Rock1F.glb?url";
 import rock1GGlbUrl from "./assets/models/Rock1G.glb?url";
+import skeletonGlbUrl from "./assets/models/Skeleton.glb?url";
+import skeletonPngUrl from "./assets/models/Skeleton.png";
 import tree3AGlbUrl from "./assets/models/Tree3A.glb?url";
 import tree3BGlbUrl from "./assets/models/Tree3B.glb?url";
 import tree3CGlbUrl from "./assets/models/Tree3C.glb?url";
