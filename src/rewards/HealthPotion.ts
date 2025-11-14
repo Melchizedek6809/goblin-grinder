@@ -217,13 +217,7 @@ export class HealthPotion extends Pickup {
 		z: number,
 		playSpawnAnimation: boolean = false,
 	): HealthPotion {
-		const potion = new HealthPotion(
-			meshAtlas,
-			x,
-			y,
-			z,
-			playSpawnAnimation,
-		);
+		const potion = new HealthPotion(meshAtlas, x, y, z, playSpawnAnimation);
 		game.pickups.push(potion);
 		game.entities.push(potion);
 		return potion;

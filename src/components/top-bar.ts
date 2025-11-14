@@ -28,10 +28,16 @@ export class TopBar extends LitElement {
 	private previousCoins = 0;
 
 	@state()
+	private previousHealth = 100;
+
+	@state()
 	private animatingScoreDigits = new Set<number>();
 
 	@state()
 	private animatingCoinDigits = new Set<number>();
+
+	@state()
+	private animatingHearts = false;
 
 	static styles = css`
 		:host {
@@ -48,35 +54,34 @@ export class TopBar extends LitElement {
 		.top-bar-container {
 			display: grid;
 			grid-template-columns: auto 1fr auto;
-			grid-template-rows: auto auto;
+			grid-template-rows: auto;
 			gap: 0;
 			padding: 0 20px;
 		}
 
-		/* Desktop layout: 2x2 grid */
+		/* Desktop layout: single row */
 		.health-section {
 			grid-column: 1;
 			grid-row: 1;
 			justify-self: start;
 		}
 
-		.score-section {
+		.container-icon {
+			float: left;
+		}
+
+		.score-coins-section {
 			grid-column: 2;
 			grid-row: 1;
 			justify-self: center;
+			display: flex;
+			gap: 12px;
 		}
 
 		.fps-section {
 			grid-column: 3;
 			grid-row: 1;
 			justify-self: end;
-		}
-
-		.coins-section {
-			grid-column: 2;
-			grid-row: 2;
-			justify-self: center;
-			margin-top: 10px;
 		}
 
 		/* Health display */
@@ -91,20 +96,16 @@ export class TopBar extends LitElement {
 			text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
 		}
 
-		.heart.full::before {
-			content: "♥";
-			color: #ff3333;
+		.heart.full {
+			filter: drop-shadow(0 0 4px rgba(255, 100, 100, 0.6));
 		}
 
-		.heart.half::before {
-			content: "♥";
-			color: #ff3333;
+		.heart.half {
 			opacity: 0.5;
 		}
 
-		.heart.empty::before {
-			content: "♥";
-			color: #555555;
+		.heart.empty {
+			filter: grayscale(100%) brightness(0.5);
 		}
 
 		/* Score and coins display */
@@ -114,8 +115,11 @@ export class TopBar extends LitElement {
 			padding: 8px 16px;
 			border-radius: 4px;
 			text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-			font-size: 24px;
+			font-size: 22px;
 			color: #ffffff;
+			min-width: 120px;
+			text-align: right;
+			display: inline-block;
 		}
 
 		.coins-container {
@@ -154,9 +158,9 @@ export class TopBar extends LitElement {
 		}
 
 		/* Mobile layout: single row, smaller elements */
-		@media (max-width: 600px) {
+		@media (max-width: 700px) {
 			.top-bar-container {
-				grid-template-columns: auto auto auto auto;
+				grid-template-columns: auto auto auto;
 				grid-template-rows: auto;
 				gap: 8px;
 				justify-content: center;
@@ -167,19 +171,14 @@ export class TopBar extends LitElement {
 				grid-row: 1;
 			}
 
-			.score-section {
+			.score-coins-section {
 				grid-column: 2;
 				grid-row: 1;
-			}
-
-			.coins-section {
-				grid-column: 3;
-				grid-row: 1;
-				margin-top: 0;
+				gap: 8px;
 			}
 
 			.fps-section {
-				grid-column: 4;
+				grid-column: 3;
 				grid-row: 1;
 			}
 
@@ -192,6 +191,7 @@ export class TopBar extends LitElement {
 			.coins-container {
 				font-size: 18px;
 				padding: 6px 12px;
+				min-width: 110px;
 			}
 
 			.fps-container {
@@ -201,7 +201,7 @@ export class TopBar extends LitElement {
 		}
 
 		/* Extra small screens: even more compact */
-		@media (max-width: 400px) {
+		@media (max-width: 600px) {
 			:host {
 				top: 10px;
 			}
@@ -209,6 +209,10 @@ export class TopBar extends LitElement {
 			.top-bar-container {
 				gap: 4px;
 				padding: 0 10px;
+			}
+
+			.score-coins-section {
+				gap: 4px;
 			}
 
 			.hearts {
@@ -220,11 +224,59 @@ export class TopBar extends LitElement {
 			.coins-container {
 				font-size: 14px;
 				padding: 4px 8px;
+				min-width: 85px;
 			}
 
 			.fps-container {
 				font-size: 12px;
 				padding: 4px 8px;
+			}
+		}
+
+		/* Ultra small screens: stack vertically if needed */
+		@media (max-width: 450px) {
+			.top-bar-container {
+				grid-template-columns: 1fr;
+				grid-template-rows: auto auto auto;
+				gap: 6px;
+				padding: 0 5px;
+			}
+
+			.health-section,
+			.score-coins-section,
+			.fps-section {
+				grid-column: 1;
+				justify-self: center;
+			}
+
+			.health-section {
+				grid-row: 1;
+			}
+
+			.score-coins-section {
+				grid-row: 2;
+				gap: 6px;
+			}
+
+			.fps-section {
+				grid-row: 3;
+			}
+
+			.hearts {
+				font-size: 18px;
+				gap: 2px;
+			}
+
+			.score-container,
+			.coins-container {
+				font-size: 12px;
+				padding: 3px 6px;
+				min-width: 70px;
+			}
+
+			.fps-container {
+				font-size: 10px;
+				padding: 3px 6px;
 			}
 		}
 	`;
@@ -260,6 +312,21 @@ export class TopBar extends LitElement {
 				this.animatingCoinDigits.clear();
 				this.requestUpdate();
 			}, 150);
+		}
+
+		// Check if health increased (healing)
+		if (changedProperties.has("health") && this.health > this.previousHealth) {
+			this.animatingHearts = true;
+			this.previousHealth = this.health;
+
+			// Clear animation after animation duration
+			setTimeout(() => {
+				this.animatingHearts = false;
+				this.requestUpdate();
+			}, 150);
+		} else if (changedProperties.has("health")) {
+			// Update previous health even if it decreased
+			this.previousHealth = this.health;
 		}
 	}
 
@@ -307,18 +374,26 @@ export class TopBar extends LitElement {
 
 		// Full hearts
 		for (let i = 0; i < fullHearts; i++) {
-			hearts.push(html`<span class="heart full"></span>`);
+			hearts.push(
+				html`<span class="heart full ${this.animatingHearts ? "pulse" : ""}"
+					>❤️</span
+				>`,
+			);
 		}
 
 		// Half heart
 		if (hasHalfHeart && fullHearts < totalHearts) {
-			hearts.push(html`<span class="heart half"></span>`);
+			hearts.push(
+				html`<span class="heart half ${this.animatingHearts ? "pulse" : ""}"
+					>❤️</span
+				>`,
+			);
 		}
 
 		// Empty hearts
 		const emptyHearts = totalHearts - fullHearts - (hasHalfHeart ? 1 : 0);
 		for (let i = 0; i < emptyHearts; i++) {
-			hearts.push(html`<span class="heart empty"></span>`);
+			hearts.push(html`<span class="heart empty">❤️</span>`);
 		}
 
 		return html`
@@ -326,18 +401,16 @@ export class TopBar extends LitElement {
 				<div class="health-section">
 					<div class="hearts">${hearts}</div>
 				</div>
-				<div class="score-section">
+				<div class="score-coins-section">
 					<div class="score-container">
-						Score: ${this.renderNumber(this.score, this.animatingScoreDigits)}
+						<span class="container-icon">⭐</span>${this.renderNumber(this.score, this.animatingScoreDigits)}
+					</div>
+					<div class="coins-container">
+						<span class="container-icon">💰</span> ${this.renderNumber(this.coins, this.animatingCoinDigits)}
 					</div>
 				</div>
 				<div class="fps-section">
 					<div class="fps-container">FPS: ${Math.round(this.fps)}</div>
-				</div>
-				<div class="coins-section">
-					<div class="coins-container">
-						Coins: ${this.renderNumber(this.coins, this.animatingCoinDigits)}
-					</div>
 				</div>
 			</div>
 		`;

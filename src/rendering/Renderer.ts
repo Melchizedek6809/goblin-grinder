@@ -136,12 +136,7 @@ export class Renderer {
 		}
 
 		entity.mesh.bind();
-		gl.drawElements(
-			gl.TRIANGLES,
-			entity.mesh.indexCount,
-			gl.UNSIGNED_SHORT,
-			0,
-		);
+		gl.drawElements(gl.TRIANGLES, entity.mesh.indexCount, gl.UNSIGNED_SHORT, 0);
 		entity.mesh.unbind();
 	}
 }

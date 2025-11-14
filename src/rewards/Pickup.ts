@@ -68,9 +68,16 @@ export abstract class Pickup extends Entity {
 				const dirX = dx / distanceXZ;
 				const dirZ = dz / distanceXZ;
 
+				// Scale strength based on distance - closer = stronger pull
+				// At pickupRange distance: strength = baseStrength
+				// At half distance: strength = 2 * baseStrength
+				// This prevents overshooting and creates a smooth pull
+				const distanceScale = this.pickupRange / distanceXZ;
+				const scaledStrength = this.gravityStrength * distanceScale;
+
 				// Apply acceleration towards player (horizontal only)
-				this.velocityX += dirX * this.gravityStrength * deltaTime;
-				this.velocityZ += dirZ * this.gravityStrength * deltaTime;
+				this.velocityX += dirX * scaledStrength * deltaTime;
+				this.velocityZ += dirZ * scaledStrength * deltaTime;
 
 				// Apply horizontal velocity
 				this.position[0] += this.velocityX * deltaTime;
