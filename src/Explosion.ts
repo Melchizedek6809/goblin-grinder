@@ -69,12 +69,12 @@ export class Explosion {
 
 		particleSystem.spawnBurst(
 			this.position,
-			128, // particle count
-			[3.0, 6.0], // speed range
+			512, // particle count
+			[2.0, 4.0], // speed range
 			[20.0, 40.0], // size range
 			[0.2, 0.4], // lifetime range
 			colors,
-			3.0, // gravity
+			-12.0, // gravity
 		);
 	}
 }
