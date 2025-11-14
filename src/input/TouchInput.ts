@@ -16,10 +16,13 @@ export class TouchInput implements InputSource {
 	private swipeStartTime: number = 0;
 	private rotateLeftTriggered: boolean = false;
 	private rotateRightTriggered: boolean = false;
+	private rotationDelta: number = 0;
 
 	// Swipe thresholds
 	private readonly SWIPE_MIN_DISTANCE = 50; // pixels
 	private readonly SWIPE_MAX_TIME = 300; // ms
+	// Swipe sensitivity (radians per pixel)
+	private readonly SWIPE_SENSITIVITY = 0.003;
 
 	constructor() {
 		// Use { passive: false } to allow preventDefault() on iOS Safari
@@ -122,18 +125,15 @@ export class TouchInput implements InputSource {
 			const swipeDistance = touch.clientX - this.swipeStartX;
 			const swipeTime = Date.now() - this.swipeStartTime;
 
-			// Quick horizontal swipe = rotation
+			// Quick horizontal swipe = smooth rotation based on distance
 			if (
 				swipeTime < this.SWIPE_MAX_TIME &&
 				Math.abs(swipeDistance) > this.SWIPE_MIN_DISTANCE
 			) {
-				if (swipeDistance > 0) {
-					// Swipe right = rotate camera right
-					this.rotateRightTriggered = true;
-				} else {
-					// Swipe left = rotate camera left
-					this.rotateLeftTriggered = true;
-				}
+				// Convert swipe distance to rotation delta
+				// Positive distance = swipe right = rotate camera right (positive rotation)
+				// Negative distance = swipe left = rotate camera left (negative rotation)
+				this.rotationDelta = swipeDistance * this.SWIPE_SENSITIVITY;
 			}
 		}
 
@@ -189,11 +189,13 @@ export class TouchInput implements InputSource {
 			moveZ,
 			rotateLeft: this.rotateLeftTriggered,
 			rotateRight: this.rotateRightTriggered,
+			rotationDelta: this.rotationDelta,
 		};
 
 		// Clear rotation triggers (one-shot)
 		this.rotateLeftTriggered = false;
 		this.rotateRightTriggered = false;
+		this.rotationDelta = 0;
 
 		return state;
 	}

@@ -4,17 +4,23 @@ import type { InputState } from "./InputState.ts";
 /**
  * Mouse input implementation
  * - Click and hold to move in that direction
- * - Optional: Could add mouse wheel for rotation (not implemented)
+ * - Mouse wheel for smooth camera rotation
  */
 export class MouseInput implements InputSource {
 	private mouseX: number = 0;
 	private mouseY: number = 0;
 	private isMouseDown: boolean = false;
+	private rotationDelta: number = 0;
+
+	// Mouse wheel sensitivity (radians per deltaY unit)
+	// Typical wheel notch gives ~100 deltaY, so 0.0008 * 100 = 0.08 radians ≈ 4.6 degrees
+	private readonly WHEEL_SENSITIVITY = 0.0008;
 
 	constructor() {
 		window.addEventListener("mousedown", this.onMouseDown);
 		window.addEventListener("mousemove", this.onMouseMove);
 		window.addEventListener("mouseup", this.onMouseUp);
+		window.addEventListener("wheel", this.onWheel);
 	}
 
 	private onMouseDown = (e: MouseEvent) => {
@@ -34,6 +40,15 @@ export class MouseInput implements InputSource {
 		this.isMouseDown = false;
 		this.mouseX = 0;
 		this.mouseY = 0;
+	};
+
+	private onWheel = (e: WheelEvent) => {
+		e.preventDefault();
+
+		// Accumulate rotation delta from wheel
+		// Positive deltaY = scroll down = rotate right
+		// Negative deltaY = scroll up = rotate left
+		this.rotationDelta += e.deltaY * this.WHEEL_SENSITIVITY;
 	};
 
 	poll(cameraAngle: number): InputState {
@@ -79,13 +94,17 @@ export class MouseInput implements InputSource {
 			}
 		}
 
-		// Build input state (no rotation for mouse)
+		// Build input state
 		const state: InputState = {
 			moveX,
 			moveZ,
 			rotateLeft: false,
 			rotateRight: false,
+			rotationDelta: this.rotationDelta,
 		};
+
+		// Clear rotation delta (one-shot)
+		this.rotationDelta = 0;
 
 		return state;
 	}
@@ -94,5 +113,6 @@ export class MouseInput implements InputSource {
 		window.removeEventListener("mousedown", this.onMouseDown);
 		window.removeEventListener("mousemove", this.onMouseMove);
 		window.removeEventListener("mouseup", this.onMouseUp);
+		window.removeEventListener("wheel", this.onWheel);
 	}
 }

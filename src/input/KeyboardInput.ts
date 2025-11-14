@@ -72,6 +72,7 @@ export class KeyboardInput implements InputSource {
 			moveZ,
 			rotateLeft: this.rotateLeftPressed,
 			rotateRight: this.rotateRightPressed,
+			rotationDelta: 0, // Keyboard uses discrete rotation (Q/E), not smooth delta
 		};
 
 		// Clear rotation triggers (one-shot)

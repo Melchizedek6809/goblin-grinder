@@ -439,6 +439,11 @@ export class Game {
 			this.camera.rotateTo(this.camera.getTargetAngle() + Math.PI / 2);
 		}
 
+		// Handle smooth camera rotation (from mouse wheel or touch)
+		if (input.rotationDelta !== 0) {
+			this.camera.rotateBy(input.rotationDelta);
+		}
+
 		// Move player (with physics collision)
 		this.player.move(input.moveX, input.moveZ, deltaTime, this.physics);
 

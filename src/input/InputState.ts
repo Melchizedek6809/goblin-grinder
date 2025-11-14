@@ -22,6 +22,12 @@ export interface InputState {
 	rotateRight: boolean;
 
 	/**
+	 * Smooth camera rotation delta (in radians)
+	 * Positive = rotate right, Negative = rotate left
+	 */
+	rotationDelta: number;
+
+	/**
 	 * Future: action buttons for gameplay
 	 */
 	attack?: boolean;
@@ -38,5 +44,6 @@ export function createEmptyInputState(): InputState {
 		moveZ: 0,
 		rotateLeft: false,
 		rotateRight: false,
+		rotationDelta: 0,
 	};
 }

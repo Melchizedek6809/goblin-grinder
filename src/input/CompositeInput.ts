@@ -18,6 +18,7 @@ export class CompositeInput implements InputSource {
 		let moveZ = 0;
 		let rotateLeft = false;
 		let rotateRight = false;
+		let rotationDelta = 0;
 
 		for (const source of this.sources) {
 			const state = source.poll(cameraAngle);
@@ -29,6 +30,9 @@ export class CompositeInput implements InputSource {
 			// Logical OR for rotation (any source can trigger)
 			rotateLeft = rotateLeft || state.rotateLeft;
 			rotateRight = rotateRight || state.rotateRight;
+
+			// Accumulate rotation delta (allows multiple sources to contribute)
+			rotationDelta += state.rotationDelta;
 		}
 
 		// Normalize movement if it exceeds 1.0 (from multiple sources)
@@ -43,6 +47,7 @@ export class CompositeInput implements InputSource {
 			moveZ,
 			rotateLeft,
 			rotateRight,
+			rotationDelta,
 		};
 	}
 

@@ -100,6 +100,14 @@ export class Camera {
 	}
 
 	/**
+	 * Rotate the camera by a delta angle (for smooth continuous rotation)
+	 * @param deltaAngle - Angle to rotate by in radians (positive = right, negative = left)
+	 */
+	rotateBy(deltaAngle: number): void {
+		this.targetAngle += deltaAngle;
+	}
+
+	/**
 	 * Set the follow target (usually the player position)
 	 * Camera will orbit around this position at current angle
 	 */
