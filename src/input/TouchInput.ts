@@ -29,7 +29,45 @@ export class TouchInput implements InputSource {
 		window.addEventListener("touchcancel", this.onTouchEnd, { passive: false });
 	}
 
+	private readonly interactiveTags = new Set(["BUTTON", "A", "INPUT", "SELECT", "TEXTAREA"]);
+	private readonly interactiveHosts = new Set(["MAIN-MENU", "GAME-OVER-SCREEN"]);
+
+	private shouldAllowDefaultBehavior = (e: TouchEvent): boolean => {
+		const path = typeof e.composedPath === "function" ? e.composedPath() : [];
+
+		for (const node of path) {
+			if (!(node instanceof HTMLElement)) {
+				continue;
+			}
+
+			if (node.dataset?.touchInteractive === "true") {
+				return true;
+			}
+
+			if (this.interactiveTags.has(node.tagName)) {
+				return true;
+			}
+
+			if (this.interactiveHosts.has(node.tagName)) {
+				return true;
+			}
+		}
+
+		return false;
+	};
+
+	private resetTouchState() {
+		this.isTouching = false;
+		this.touchX = 0;
+		this.touchY = 0;
+	}
+
 	private onTouchStart = (e: TouchEvent) => {
+		if (this.shouldAllowDefaultBehavior(e)) {
+			this.resetTouchState();
+			return;
+		}
+
 		e.preventDefault();
 
 		if (e.touches.length > 0) {
@@ -45,6 +83,11 @@ export class TouchInput implements InputSource {
 	};
 
 	private onTouchMove = (e: TouchEvent) => {
+		if (this.shouldAllowDefaultBehavior(e)) {
+			this.resetTouchState();
+			return;
+		}
+
 		e.preventDefault();
 
 		if (e.touches.length > 0) {
@@ -55,6 +98,11 @@ export class TouchInput implements InputSource {
 	};
 
 	private onTouchEnd = (e: TouchEvent) => {
+		if (this.shouldAllowDefaultBehavior(e)) {
+			this.resetTouchState();
+			return;
+		}
+
 		e.preventDefault();
 
 		// Detect swipe gesture for rotation
@@ -75,9 +123,7 @@ export class TouchInput implements InputSource {
 			}
 		}
 
-		this.isTouching = false;
-		this.touchX = 0;
-		this.touchY = 0;
+		this.resetTouchState();
 	};
 
 	poll(cameraAngle: number): InputState {
