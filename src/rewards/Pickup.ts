@@ -1,6 +1,6 @@
-import { Entity } from "./Entity.ts";
-import type { Mesh } from "./Mesh.ts";
-import type { Game } from "./main.ts";
+import type { Mesh } from "../assets/Mesh.ts";
+import { Entity } from "../objects/Entity.ts";
+import type { Game } from "../main.ts";
 
 export abstract class Pickup extends Entity {
 	public isCollected: boolean = false;

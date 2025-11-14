@@ -1,10 +1,10 @@
 import { mat4, vec3 } from "gl-matrix";
+import type { SphereCollider } from "../physics/Collider.ts";
+import type { Physics } from "../physics/Physics.ts";
 import type { Camera } from "./Camera.ts";
-import type { SphereCollider } from "./physics/Collider.ts";
-import type { Physics } from "./physics/Physics.ts";
 import { Shader } from "./Shader.ts";
-import debugFragmentShaderSource from "./shaders/debug.frag?raw";
-import debugVertexShaderSource from "./shaders/debug.vert?raw";
+import debugFragmentShaderSource from "../shaders/debug.frag?raw";
+import debugVertexShaderSource from "../shaders/debug.vert?raw";
 
 /**
  * Debug renderer for visualizing colliders and other debug information

@@ -127,7 +127,7 @@ export class Light {
 		return this.lightSpaceMatrix;
 	}
 
-	renderShadowMap(entities: Renderable[]): void {
+	renderShadowMap(entities: ReadonlyArray<Renderable>): void {
 		const gl = this.gl;
 
 		this.updateMatrices();

@@ -1,10 +1,10 @@
+import type { MeshAtlas } from "../assets/MeshAtlas.ts";
+import type { StaticObject } from "../objects/StaticObject.ts";
+import { createSphereCollider } from "../physics/Collider.ts";
+import type { Physics } from "../physics/Physics.ts";
+import type { Player } from "../objects/Player.ts";
+import type { Renderable } from "../rendering/Renderable.ts";
 import { Enemy } from "./Enemy.ts";
-import type { MeshAtlas } from "./MeshAtlas.ts";
-import type { Player } from "./Player.ts";
-import { createSphereCollider } from "./physics/Collider.ts";
-import type { Physics } from "./physics/Physics.ts";
-import type { Renderable } from "./Renderable.ts";
-import type { StaticObject } from "./StaticObject.ts";
 
 /**
  * Manages spawning of enemies and static objects

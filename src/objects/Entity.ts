@@ -1,7 +1,7 @@
 import { mat4, quat, vec3 } from "gl-matrix";
-import type { Mesh } from "./Mesh.ts";
-import type { Collider } from "./physics/Collider.ts";
-import type { Renderable } from "./Renderable.ts";
+import type { Mesh } from "../assets/Mesh.ts";
+import type { Collider } from "../physics/Collider.ts";
+import type { Renderable } from "../rendering/Renderable.ts";
 
 export class Entity implements Renderable {
 	public position: vec3;

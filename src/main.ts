@@ -1,53 +1,43 @@
 import { vec3 } from "gl-matrix";
-import { Camera } from "./Camera.ts";
-import { Coin } from "./Coin.ts";
-import type { GameOverScreen } from "./components/game-over-screen.ts";
-// Import UI components
-import type { MainMenu } from "./components/main-menu.ts";
-import type { TopBar } from "./components/top-bar.ts";
-import { DebugRenderer } from "./DebugRenderer.ts";
-import type { Enemy } from "./Enemy.ts";
-import { Entity } from "./Entity.ts";
-import type { Explosion } from "./Explosion.ts";
+import { Mesh } from "./assets/Mesh.ts";
+import { MeshAtlas } from "./assets/MeshAtlas.ts";
+import { NoiseTexture } from "./assets/NoiseTexture.ts";
+import type { Enemy } from "./enemies/Enemy.ts";
+import { SpawnManager } from "./enemies/SpawnManager.ts";
 import { CompositeInput } from "./input/CompositeInput.ts";
 import type { InputSource } from "./input/InputSource.ts";
 import { KeyboardInput } from "./input/KeyboardInput.ts";
 import { MouseInput } from "./input/MouseInput.ts";
 import { TouchInput } from "./input/TouchInput.ts";
-import { Light } from "./Light.ts";
-import { Mesh } from "./Mesh.ts";
-import { MeshAtlas } from "./MeshAtlas.ts";
-import { NoiseTexture } from "./NoiseTexture.ts";
-import { ParticleSystem } from "./ParticleSystem.ts";
-import type { Pickup } from "./Pickup.ts";
-import { Player } from "./Player.ts";
-import type { Projectile } from "./Projectile.ts";
+import { Entity } from "./objects/Entity.ts";
+import { StaticBush } from "./objects/StaticBush.ts";
+import { StaticRock } from "./objects/StaticRock.ts";
+import { StaticTree } from "./objects/StaticTree.ts";
 import { createSphereCollider } from "./physics/Collider.ts";
 import { Physics } from "./physics/Physics.ts";
-import type { Renderable } from "./Renderable.ts";
-import { Shader } from "./Shader.ts";
-import { SpawnManager } from "./SpawnManager.ts";
-import { StaticBush } from "./StaticBush.ts";
-import { StaticRock } from "./StaticRock.ts";
-import { StaticTree } from "./StaticTree.ts";
+import { Player } from "./objects/Player.ts";
+import { Camera } from "./rendering/Camera.ts";
+import { DebugRenderer } from "./rendering/DebugRenderer.ts";
+import { Light } from "./rendering/Light.ts";
+import { Renderer } from "./rendering/Renderer.ts";
+import { Shader } from "./rendering/Shader.ts";
+import { Coin } from "./rewards/Coin.ts";
+import { CombatSystem } from "./systems/CombatSystem.ts";
+import { EntityManager } from "./systems/EntityManager.ts";
+import { ProjectileManager } from "./systems/ProjectileManager.ts";
+import { RewardSystem } from "./systems/RewardSystem.ts";
+import { GameState, UIManager } from "./systems/UIManager.ts";
+import { ParticleSystem } from "./vfx/ParticleSystem.ts";
+import { FireballWeapon } from "./weapons/FireballWeapon.ts";
 import fragmentShaderSource from "./shaders/basic.frag?raw";
 import vertexShaderSource from "./shaders/basic.vert?raw";
 import depthFragmentShaderSource from "./shaders/depth.frag?raw";
 import depthVertexShaderSource from "./shaders/depth.vert?raw";
 import particleFragmentShaderSource from "./shaders/particle.frag?raw";
 import particleVertexShaderSource from "./shaders/particle.vert?raw";
-import { FireballWeapon } from "./weapons/FireballWeapon.ts";
 import "./components/top-bar.ts";
 import "./components/main-menu.ts";
 import "./components/game-over-screen.ts";
-
-const GameState = {
-	MENU: 0,
-	PLAYING: 1,
-	GAME_OVER: 2,
-} as const;
-
-type GameState = (typeof GameState)[keyof typeof GameState];
 
 export class Game {
 	public readonly rootElement: HTMLElement;
@@ -56,48 +46,68 @@ export class Game {
 	public width = 0;
 	public height = 0;
 
+	// Core systems
+	private entityManager: EntityManager = new EntityManager();
+	private uiManager: UIManager = new UIManager();
+	private projectileManager: ProjectileManager = new ProjectileManager();
+	private combatSystem: CombatSystem = new CombatSystem();
+	private rewardSystem: RewardSystem = new RewardSystem();
+
+	// Rendering
 	private shader: Shader | null = null;
 	private depthShader: Shader | null = null;
 	private particleShader: Shader | null = null;
+	private renderer: Renderer | null = null;
 	private camera: Camera | null = null;
+	private light: Light | null = null;
 	private noiseTexture: NoiseTexture | null = null;
 	private cloudOffset: number = 0;
-	public entities: Renderable[] = [];
-	private light: Light | null = null;
+
+	// Game objects
 	public player: Player | null = null;
 	private enemies: Enemy[] = [];
-	public pickups: Pickup[] = [];
 	public particleSystem: ParticleSystem | null = null;
-	private projectiles: Projectile[] = [];
-	private explosions: Explosion[] = [];
 
+	// Input and physics
 	private inputSource: InputSource;
 	private physics: Physics = new Physics();
 	private spawnManager: SpawnManager | null = null;
+
+	// Debug
 	private debugRenderer: DebugRenderer | null = null;
 	private debugMode: boolean = false;
-	private lastFrameTime: number = 0;
 
-	// Fixed timestep for game logic updates
+	// Game loop
+	private lastFrameTime: number = 0;
 	private readonly fixedTimestep: number = 1 / 30; // 30 updates per second
 	private accumulator: number = 0;
 
-	// UI elements
-	private topBar: TopBar | null = null;
-	private mainMenu: MainMenu | null = null;
-	private gameOverScreen: GameOverScreen | null = null;
-
-	// FPS tracking
-	private fpsFrameTimes: number[] = [];
-	private fpsUpdateCounter: number = 0;
-
 	// Game state
 	private gameState: GameState = GameState.MENU;
-	private score: number = 0;
-	public coins: number = 0;
 
 	// Cache for loaded assets (to avoid reloading on restart)
 	private cachedAtlas: MeshAtlas | null = null;
+
+	// Public getters for systems (for compatibility with existing code)
+	public get pickups() {
+		return this.rewardSystem.getMutablePickups();
+	}
+
+	public get entities() {
+		return this.entityManager.getMutableEntities();
+	}
+
+	public get coins() {
+		return this.rewardSystem.getCoins();
+	}
+
+	public set coins(value: number) {
+		// This is used by Coin.onCollect
+		const current = this.rewardSystem.getCoins();
+		if (value > current) {
+			this.rewardSystem.addCoins(value - current);
+		}
+	}
 
 	constructor(rootElement: HTMLElement) {
 		this.rootElement = rootElement;
@@ -105,23 +115,12 @@ export class Game {
 		this.canvasElement = canvas;
 		rootElement.append(canvas);
 
-		// Get UI elements after custom elements are defined
-		Promise.all([
-			customElements.whenDefined("top-bar"),
-			customElements.whenDefined("main-menu"),
-			customElements.whenDefined("game-over-screen"),
-		]).then(() => {
-			this.topBar = document.querySelector("top-bar");
-			this.mainMenu = document.querySelector("main-menu");
-			this.gameOverScreen = document.querySelector("game-over-screen");
-
-			// Set up menu event listeners
-			this.mainMenu?.addEventListener("start-game", () => this.startGame());
-			this.gameOverScreen?.addEventListener("restart-game", () =>
-				this.restartGame(),
-			);
-			this.gameOverScreen?.addEventListener("back-to-menu", () =>
-				this.backToMenu(),
+		// Initialize UI manager and set up event listeners
+		this.uiManager.init().then(() => {
+			this.uiManager.setupEventListeners(
+				() => this.startGame(),
+				() => this.restartGame(),
+				() => this.backToMenu(),
 			);
 
 			// Check for skipMenu URL parameter
@@ -131,7 +130,7 @@ export class Game {
 				this.startGame();
 			} else {
 				// Initialize UI state (show menu)
-				this.updateUIVisibility();
+				this.uiManager.updateVisibility(this.gameState);
 			}
 		});
 
@@ -193,16 +192,14 @@ export class Game {
 		const gl = this.gl;
 
 		// Clear existing game state
-		this.entities = [];
+		this.entityManager.clear();
+		this.projectileManager.clear();
+		this.combatSystem.clear();
+		this.rewardSystem.reset();
 		this.light = null;
 		this.enemies = [];
-		this.pickups = [];
-		this.projectiles = [];
-		this.explosions = [];
 		this.physics = new Physics();
 		this.spawnManager = new SpawnManager(this.physics);
-		this.score = 0;
-		this.coins = 0;
 
 		// Reset camera and shader state (only if not already initialized)
 		if (!this.shader) {
@@ -223,6 +220,9 @@ export class Game {
 				particleFragmentShaderSource,
 			);
 
+			// Create renderer
+			this.renderer = new Renderer(gl, this.shader);
+
 			// Create debug renderer
 			this.debugRenderer = new DebugRenderer(gl);
 
@@ -239,11 +239,8 @@ export class Game {
 		}
 		this.particleSystem = new ParticleSystem(gl, this.particleShader, 2000);
 
-		// Create camera (isometric-style view) - shader is guaranteed to exist here
-		if (!this.shader) {
-			throw new Error("Shader not initialized");
-		}
-		this.camera = new Camera(gl, this.shader);
+		// Create camera (isometric-style view)
+		this.camera = new Camera(gl);
 		this.camera.setPosition(5, 8, 5);
 		this.camera.setTarget(0, 0, 0);
 
@@ -265,7 +262,7 @@ export class Game {
 		const ground = new Entity(planeMesh);
 		ground.setPosition(0, -0.5, 0);
 		ground.setScale(64, 1, 64);
-		this.entities.push(ground);
+		this.entityManager.addEntity(ground);
 
 		// Load or reuse cached atlas
 		let atlas: MeshAtlas;
@@ -279,7 +276,7 @@ export class Game {
 
 		// Create player from atlas
 		this.player = new Player(atlas.mage);
-		this.entities.push(...this.player.entities);
+		this.entityManager.addEntities(this.player.entities);
 
 		// Add collider to player (layer 0 = player, collide with everything except player layer)
 		if (this.player.entities.length > 0) {
@@ -302,7 +299,7 @@ export class Game {
 			5,
 			-0.5,
 			5,
-			this.entities,
+			this.entityManager.getMutableEntities(),
 			this.enemies,
 		);
 		this.spawnManager.spawnEnemy(
@@ -310,7 +307,7 @@ export class Game {
 			-5,
 			-0.5,
 			-5,
-			this.entities,
+			this.entityManager.getMutableEntities(),
 			this.enemies,
 		);
 
@@ -326,7 +323,7 @@ export class Game {
 				maxScale: 1.2,
 				colliderRadius: 0.5, // Trees have collision
 			},
-			this.entities,
+			this.entityManager.getMutableEntities(),
 		);
 
 		this.spawnManager.spawnStaticObjects(
@@ -340,7 +337,7 @@ export class Game {
 				maxScale: 1.4,
 				colliderRadius: 0.6, // Rocks have collision
 			},
-			this.entities,
+			this.entityManager.getMutableEntities(),
 		);
 
 		this.spawnManager.spawnStaticObjects(
@@ -354,7 +351,7 @@ export class Game {
 				maxScale: 1.3,
 				// No collider - bushes are passable
 			},
-			this.entities,
+			this.entityManager.getMutableEntities(),
 		);
 
 		// Spawn test coins with different amounts
@@ -371,7 +368,7 @@ export class Game {
 		try {
 			await this.initScene();
 			this.gameState = GameState.PLAYING;
-			this.updateUIVisibility();
+			this.uiManager.updateVisibility(this.gameState);
 		} catch (error) {
 			console.error("Failed to start game:", error);
 			alert(
@@ -386,7 +383,7 @@ export class Game {
 	private async restartGame() {
 		await this.initScene();
 		this.gameState = GameState.PLAYING;
-		this.updateUIVisibility();
+		this.uiManager.updateVisibility(this.gameState);
 	}
 
 	/**
@@ -394,35 +391,7 @@ export class Game {
 	 */
 	private backToMenu() {
 		this.gameState = GameState.MENU;
-		this.updateUIVisibility();
-	}
-
-	/**
-	 * Update UI element visibility based on game state
-	 */
-	private updateUIVisibility() {
-		if (!this.mainMenu || !this.gameOverScreen || !this.topBar) {
-			return;
-		}
-
-		switch (this.gameState) {
-			case GameState.MENU:
-				this.mainMenu.visible = true;
-				this.gameOverScreen.visible = false;
-				this.topBar.visible = false;
-				break;
-			case GameState.PLAYING:
-				this.mainMenu.visible = false;
-				this.gameOverScreen.visible = false;
-				this.topBar.visible = true;
-				break;
-			case GameState.GAME_OVER:
-				this.mainMenu.visible = false;
-				this.gameOverScreen.visible = true;
-				this.gameOverScreen.score = this.score;
-				this.topBar.visible = false;
-				break;
-		}
+		this.uiManager.updateVisibility(this.gameState);
 	}
 
 	private updateCamera(deltaTime: number) {
@@ -496,9 +465,10 @@ export class Game {
 		}
 
 		// Draw the scene (pass time and noise texture for cloud shadows)
-		if (this.noiseTexture) {
-			this.camera.draw(
-				this.entities,
+		if (this.renderer && this.noiseTexture) {
+			this.renderer.render(
+				this.entityManager.getEntities(),
+				this.camera,
 				this.light,
 				timestamp / 1000 + this.cloudOffset,
 				this.noiseTexture.texture,
@@ -535,36 +505,22 @@ export class Game {
 	 * Update UI elements (health, FPS, score, coins, etc.)
 	 */
 	private updateUI(deltaTime: number) {
-		// Calculate FPS (rolling average over last 60 frames)
-		if (deltaTime > 0) {
-			this.fpsFrameTimes.push(1 / deltaTime);
-			if (this.fpsFrameTimes.length > 60) {
-				this.fpsFrameTimes.shift();
-			}
-		}
+		if (!this.player) return;
 
-		// Update top bar (only every 10 frames for FPS to reduce jitter)
-		this.fpsUpdateCounter++;
-		if (this.fpsUpdateCounter >= 10 && this.topBar && this.player) {
-			const avgFps =
-				this.fpsFrameTimes.reduce((a, b) => a + b, 0) /
-				this.fpsFrameTimes.length;
-			this.topBar.health = this.player.health;
-			this.topBar.maxHealth = this.player.maxHealth;
-			this.topBar.score = this.score;
-			this.topBar.coins = this.coins;
-			this.topBar.fps = avgFps;
-			this.fpsUpdateCounter = 0;
-		}
+		// Update UI manager with current game stats
+		this.uiManager.update(
+			deltaTime,
+			this.player.health,
+			this.player.maxHealth,
+			this.rewardSystem.getScore(),
+			this.rewardSystem.getCoins(),
+		);
 
 		// Check for game over condition
-		if (
-			this.gameState === GameState.PLAYING &&
-			this.player &&
-			this.player.health <= 0
-		) {
+		if (this.gameState === GameState.PLAYING && this.player.health <= 0) {
 			this.gameState = GameState.GAME_OVER;
-			this.updateUIVisibility();
+			this.uiManager.showGameOver(this.rewardSystem.getScore());
+			this.uiManager.updateVisibility(this.gameState);
 		}
 	}
 
@@ -572,101 +528,41 @@ export class Game {
 	 * Fixed timestep update - runs game logic at consistent 30fps
 	 */
 	private fixedUpdate() {
-		if (!this.player) return;
+		if (!this.player || !this.particleSystem) return;
 
 		// Update player logic (only during gameplay)
 		if (this.gameState === GameState.PLAYING) {
-			this.player.update(this.fixedTimestep, this.particleSystem || undefined);
+			this.player.update(this.fixedTimestep, this.particleSystem);
 
 			// Update weapons
-			if (this.particleSystem) {
-				for (const weapon of this.player.weapons) {
-					weapon.update(
-						this.player,
-						this.enemies,
-						(projectile) => {
-							this.projectiles.push(projectile);
-						},
-						this.particleSystem,
-						(explosion) => {
-							this.explosions.push(explosion);
-						},
-					);
-				}
-			}
-
-			// Update projectiles
-			for (const projectile of this.projectiles) {
-				projectile.update(this.fixedTimestep);
-
-				// Check collision with static objects (trees, rocks) - XZ plane only
-				const hitObstacle = this.physics.overlapSphere(
-					vec3.fromValues(projectile.position[0], -0.5, projectile.position[2]),
-					0.2, // smaller projectile collision radius
-					3, // projectile layer
-					0x00000004, // only collide with layer 2 (environment)
+			for (const weapon of this.player.weapons) {
+				weapon.update(
+					this.player,
+					this.enemies,
+					(projectile) => this.projectileManager.spawn(projectile),
+					this.particleSystem,
+					(explosion) => this.combatSystem.addExplosion(explosion),
 				);
-
-				if (hitObstacle) {
-					const shouldDestroy = projectile.onHitObstacle();
-					if (shouldDestroy) {
-						projectile.destroy();
-						continue; // Skip enemy check if destroyed
-					}
-				}
-
-				// Check collision with enemies - XZ plane only
-				for (const enemy of this.enemies) {
-					if (enemy.getState() === "death") continue; // Skip dead enemies
-
-					// Calculate XZ distance only
-					const dx = projectile.position[0] - enemy.getPosition()[0];
-					const dz = projectile.position[2] - enemy.getPosition()[2];
-					const distXZ = Math.sqrt(dx * dx + dz * dz);
-
-					// Smaller collision radius: enemy (0.25) + projectile (0.2) = 0.45
-					if (distXZ < 0.5) {
-						const shouldDestroy = projectile.onHit(enemy);
-						if (shouldDestroy) {
-							projectile.destroy();
-						}
-						break; // Only hit one enemy
-					}
-				}
 			}
 
-			// Handle explosions (deal damage immediately)
-			if (this.particleSystem) {
-				for (const explosion of this.explosions) {
-					explosion.dealDamage(this.enemies);
-					explosion.spawnParticles(this.particleSystem);
-				}
-			}
-			this.explosions = []; // Clear explosions after processing
+			// Update projectiles and check collisions
+			this.projectileManager.update(
+				this.fixedTimestep,
+				this.enemies,
+				this.physics,
+			);
 
-			// Remove dead projectiles
-			this.projectiles = this.projectiles.filter((p) => p.isAlive);
+			// Process explosions
+			this.combatSystem.processExplosions(this.enemies, this.particleSystem);
 
-			// Update pickups and remove collected ones
-			const collectedPickups: Pickup[] = [];
-			this.pickups = this.pickups.filter((pickup) => {
-				const shouldRemove = pickup.update(this.fixedTimestep, this);
-				if (shouldRemove) {
-					collectedPickups.push(pickup);
-					return false;
-				}
-				return true;
-			});
+			// Update pickups and handle collection
+			this.rewardSystem.updatePickups(
+				this.fixedTimestep,
+				this,
+				this.entityManager,
+			);
 
-			// Remove collected pickup entities from the entities array
-			for (const pickup of collectedPickups) {
-				const idx = this.entities.indexOf(pickup);
-				if (idx >= 0) {
-					this.entities.splice(idx, 1);
-				}
-			}
-
-			// Remove despawned enemies (points/coins already awarded on death)
+			// Remove despawned enemies
 			const despawnedEnemies: Enemy[] = [];
 			this.enemies = this.enemies.filter((enemy) => {
 				if (enemy.shouldDespawn()) {
@@ -678,12 +574,7 @@ export class Game {
 
 			// Remove entities belonging to despawned enemies
 			for (const enemy of despawnedEnemies) {
-				for (const entity of enemy.entities) {
-					const idx = this.entities.indexOf(entity);
-					if (idx >= 0) {
-						this.entities.splice(idx, 1);
-					}
-				}
+				this.entityManager.removeEntities(enemy.entities);
 			}
 		}
 
@@ -698,28 +589,11 @@ export class Game {
 			}
 
 			// Award points and drop coins for enemies that just entered death state
-			for (const enemy of this.enemies) {
-				if (enemy.getState() === "death" && !enemy.rewardGranted) {
-					enemy.rewardGranted = true;
-					this.score += 100; // 100 points per kill
-
-					// Spawn coins from killed enemies (50% chance)
-					if (this.cachedAtlas && Math.random() < 0.5) {
-						// 50% chance to drop a coin
-						const enemyPos = enemy.getPosition();
-						const coinAmount = Math.floor(Math.random() * 3) + 1; // 1-3 coins
-						Coin.spawn(
-							this,
-							this.cachedAtlas,
-							coinAmount,
-							enemyPos[0],
-							0.3,
-							enemyPos[2],
-							true, // Play spawn animation
-						);
-					}
-				}
-			}
+			this.rewardSystem.processEnemyRewards(
+				this.enemies,
+				this,
+				this.cachedAtlas,
+			);
 		}
 	}
 
@@ -744,9 +618,7 @@ export class Game {
 
 		// Render projectiles (update their particle effects)
 		if (this.gameState === GameState.PLAYING) {
-			for (const projectile of this.projectiles) {
-				projectile.render(deltaTime);
-			}
+			this.projectileManager.render(deltaTime);
 		}
 
 		// Enemy spawning (only during gameplay)
@@ -755,7 +627,7 @@ export class Game {
 				deltaTime,
 				this.cachedAtlas,
 				this.player,
-				this.entities,
+				this.entityManager.getMutableEntities(),
 				this.enemies,
 			);
 		}

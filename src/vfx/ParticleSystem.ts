@@ -1,6 +1,6 @@
 import { type mat4, vec3 } from "gl-matrix";
+import type { Shader } from "../rendering/Shader";
 import { Particle } from "./Particle";
-import type { Shader } from "./Shader";
 
 export class ParticleSystem {
 	private particles: Particle[] = [];

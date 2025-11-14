@@ -1,30 +1,30 @@
-import bush2DGlbUrl from "./assets/models/Bush2D.glb?url";
-import bush2EGlbUrl from "./assets/models/Bush2E.glb?url";
-import bush2FGlbUrl from "./assets/models/Bush2F.glb?url";
-import chestGlbUrl from "./assets/models/Chest.glb?url";
-import chestGoldGlbUrl from "./assets/models/ChestGold.glb?url";
-import coinGlbUrl from "./assets/models/Coin.glb?url";
-import coinStackLargeGlbUrl from "./assets/models/CoinStackLarge.glb?url";
-import coinStackMediumGlbUrl from "./assets/models/CoinStackMedium.glb?url";
-import coinStackSmallGlbUrl from "./assets/models/CoinStackSmall.glb?url";
-import dungeonPngUrl from "./assets/models/Dungeon.png";
+import bush2DGlbUrl from "../assets/models/Bush2D.glb?url";
+import bush2EGlbUrl from "../assets/models/Bush2E.glb?url";
+import bush2FGlbUrl from "../assets/models/Bush2F.glb?url";
+import chestGlbUrl from "../assets/models/Chest.glb?url";
+import chestGoldGlbUrl from "../assets/models/ChestGold.glb?url";
+import coinGlbUrl from "../assets/models/Coin.glb?url";
+import coinStackLargeGlbUrl from "../assets/models/CoinStackLarge.glb?url";
+import coinStackMediumGlbUrl from "../assets/models/CoinStackMedium.glb?url";
+import coinStackSmallGlbUrl from "../assets/models/CoinStackSmall.glb?url";
+import dungeonPngUrl from "../assets/models/Dungeon.png";
 // Static imports for Vite bundling
 // Note: ?url suffix tells Vite to treat these as URL assets
-import mageGlbUrl from "./assets/models/Mage.glb?url";
-import magePngUrl from "./assets/models/Mage.png";
-import naturePngUrl from "./assets/models/Nature.png";
-import rock1AGlbUrl from "./assets/models/Rock1A.glb?url";
-import rock1DGlbUrl from "./assets/models/Rock1D.glb?url";
-import rock1FGlbUrl from "./assets/models/Rock1F.glb?url";
-import rock1GGlbUrl from "./assets/models/Rock1G.glb?url";
-import skeletonGlbUrl from "./assets/models/Skeleton.glb?url";
-import skeletonPngUrl from "./assets/models/Skeleton.png";
-import tree3AGlbUrl from "./assets/models/Tree3A.glb?url";
-import tree3BGlbUrl from "./assets/models/Tree3B.glb?url";
-import tree3CGlbUrl from "./assets/models/Tree3C.glb?url";
-import tree4AGlbUrl from "./assets/models/Tree4A.glb?url";
-import tree4BGlbUrl from "./assets/models/Tree4B.glb?url";
-import tree4CGlbUrl from "./assets/models/Tree4C.glb?url";
+import mageGlbUrl from "../assets/models/Mage.glb?url";
+import magePngUrl from "../assets/models/Mage.png";
+import naturePngUrl from "../assets/models/Nature.png";
+import rock1AGlbUrl from "../assets/models/Rock1A.glb?url";
+import rock1DGlbUrl from "../assets/models/Rock1D.glb?url";
+import rock1FGlbUrl from "../assets/models/Rock1F.glb?url";
+import rock1GGlbUrl from "../assets/models/Rock1G.glb?url";
+import skeletonGlbUrl from "../assets/models/Skeleton.glb?url";
+import skeletonPngUrl from "../assets/models/Skeleton.png";
+import tree3AGlbUrl from "../assets/models/Tree3A.glb?url";
+import tree3BGlbUrl from "../assets/models/Tree3B.glb?url";
+import tree3CGlbUrl from "../assets/models/Tree3C.glb?url";
+import tree4AGlbUrl from "../assets/models/Tree4A.glb?url";
+import tree4BGlbUrl from "../assets/models/Tree4B.glb?url";
+import tree4CGlbUrl from "../assets/models/Tree4C.glb?url";
 import { Mesh } from "./Mesh.ts";
 
 /**

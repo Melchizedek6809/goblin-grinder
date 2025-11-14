@@ -1,5 +1,5 @@
 import { vec3 } from "gl-matrix";
-import type { Enemy } from "./Enemy";
+import type { Enemy } from "../enemies/Enemy.ts";
 
 export abstract class Projectile {
 	position: vec3;

@@ -1,7 +1,7 @@
 import { vec3 } from "gl-matrix";
-import type { MeshAtlas } from "./MeshAtlas.ts";
-import type { Game } from "./main.ts";
-import { Particle } from "./Particle.ts";
+import type { MeshAtlas } from "../assets/MeshAtlas.ts";
+import type { Game } from "../main.ts";
+import { Particle } from "../vfx/Particle.ts";
 import { Pickup } from "./Pickup.ts";
 
 export class Coin extends Pickup {

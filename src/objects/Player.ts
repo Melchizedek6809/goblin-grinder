@@ -1,11 +1,11 @@
 import { quat, vec3 } from "gl-matrix";
+import type { Mesh } from "../assets/Mesh.ts";
 import { Entity } from "./Entity.ts";
-import type { Mesh } from "./Mesh.ts";
-import { Particle } from "./Particle.ts";
-import type { ParticleSystem } from "./ParticleSystem.ts";
-import type { SphereCollider } from "./physics/Collider.ts";
-import type { Physics } from "./physics/Physics.ts";
-import type { Weapon } from "./Weapon.ts";
+import type { SphereCollider } from "../physics/Collider.ts";
+import type { Physics } from "../physics/Physics.ts";
+import { Particle } from "../vfx/Particle.ts";
+import type { ParticleSystem } from "../vfx/ParticleSystem.ts";
+import type { Weapon } from "../weapons/Weapon.ts";
 
 export class Player {
 	public entities: Entity[];

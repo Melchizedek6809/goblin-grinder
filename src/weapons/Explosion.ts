@@ -1,6 +1,6 @@
 import { vec3 } from "gl-matrix";
-import type { Enemy } from "./Enemy";
-import type { ParticleSystem } from "./ParticleSystem";
+import type { Enemy } from "../enemies/Enemy.ts";
+import type { ParticleSystem } from "../vfx/ParticleSystem.ts";
 
 export class Explosion {
 	position: vec3;

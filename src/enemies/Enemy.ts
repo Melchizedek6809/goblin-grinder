@@ -1,9 +1,9 @@
 import { quat, vec3 } from "gl-matrix";
-import { Entity } from "./Entity.ts";
-import type { Mesh } from "./Mesh.ts";
-import type { Player } from "./Player.ts";
-import type { SphereCollider } from "./physics/Collider.ts";
-import type { Physics } from "./physics/Physics.ts";
+import type { Mesh } from "../assets/Mesh.ts";
+import { Entity } from "../objects/Entity.ts";
+import type { SphereCollider } from "../physics/Collider.ts";
+import type { Physics } from "../physics/Physics.ts";
+import type { Player } from "../objects/Player.ts";
 
 export type EnemyState = "idle" | "chase" | "attack" | "death";
 

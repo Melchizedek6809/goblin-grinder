@@ -1,12 +1,12 @@
 import { mat4, vec3 } from "gl-matrix";
-import type { Light } from "./Light.ts";
-import type { Renderable } from "./Renderable.ts";
-import type { Shader } from "./Shader.ts";
-import { applySpring } from "./Spring.ts";
+import { applySpring } from "../physics/Spring.ts";
 
+/**
+ * Camera manages view and projection matrices
+ * Handles camera movement, rotation, and following behavior with spring physics
+ */
 export class Camera {
 	private gl: WebGL2RenderingContext;
-	private shader: Shader;
 
 	public position: vec3;
 	public target: vec3;
@@ -38,9 +38,8 @@ export class Camera {
 	public baseHeight: number = 6; // Base height above target
 	public height: number = 6; // Actual height (adjusted for aspect ratio)
 
-	constructor(gl: WebGL2RenderingContext, shader: Shader) {
+	constructor(gl: WebGL2RenderingContext) {
 		this.gl = gl;
-		this.shader = shader;
 
 		this.position = vec3.fromValues(0, 0, 5);
 		this.target = vec3.fromValues(0, 0, 0);
@@ -168,6 +167,10 @@ export class Camera {
 			this.followDamping,
 			deltaTime,
 		);
+
+		// Update matrices after movement
+		const aspectRatio = this.gl.canvas.width / this.gl.canvas.height;
+		this.updateMatrices(aspectRatio);
 	}
 
 	/**
@@ -191,6 +194,9 @@ export class Camera {
 		return distance < baseCullRadius + boundingRadius;
 	}
 
+	/**
+	 * Update view and projection matrices
+	 */
 	updateMatrices(aspectRatio: number) {
 		mat4.perspective(
 			this.projectionMatrix,
@@ -201,94 +207,5 @@ export class Camera {
 		);
 
 		mat4.lookAt(this.viewMatrix, this.position, this.target, this.up);
-	}
-
-	draw(
-		entities: Renderable[],
-		light: Light | null = null,
-		time: number = 0,
-		noiseTexture: WebGLTexture | null = null,
-	) {
-		const gl = this.gl;
-		const aspectRatio = gl.canvas.width / gl.canvas.height;
-
-		// First pass: Render shadow map for the light
-		if (light) {
-			light.renderShadowMap(entities);
-		}
-
-		// Second pass: Render main scene
-		// Reset viewport to canvas size
-		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-		this.updateMatrices(aspectRatio);
-
-		this.shader.use();
-
-		// Set camera uniforms
-		this.shader.setUniformMatrix4fv("u_view", this.viewMatrix);
-		this.shader.setUniformMatrix4fv("u_projection", this.projectionMatrix);
-		this.shader.setUniform1f("u_time", time);
-
-		// Bind noise texture for cloud shadows (use texture slot 5)
-		if (noiseTexture) {
-			gl.activeTexture(gl.TEXTURE5);
-			gl.bindTexture(gl.TEXTURE_2D, noiseTexture);
-			this.shader.setUniform1i("u_noiseTexture", 5);
-		}
-
-		// Set light uniforms
-		if (light) {
-			this.shader.setUniformMatrix4fv(
-				"u_lightSpaceMatrix",
-				light.getLightSpaceMatrix(),
-			);
-			this.shader.setUniform3fv("u_lightPosition", light.position);
-			this.shader.setUniform3fv("u_lightColor", light.color);
-
-			// Bind shadow map texture
-			gl.activeTexture(gl.TEXTURE0);
-			gl.bindTexture(gl.TEXTURE_2D, light.shadowTexture);
-			this.shader.setUniform1i("u_shadowMap", 0);
-		}
-
-		// Draw each entity
-		for (const entity of entities) {
-			// Skip entities without a mesh
-			if (!entity.mesh) continue;
-
-			// Frustum culling - calculate bounding radius from entity scale
-			// Approximate bounding sphere radius (assumes mesh fits in a unit cube)
-			const maxScale = Math.max(
-				entity.scale[0],
-				entity.scale[1],
-				entity.scale[2],
-			);
-			const boundingRadius = maxScale * 1.0; // Base radius of 1.0 for unit-sized meshes
-
-			// Skip entities outside visible area
-			if (!this.isInFrustum(entity.position, boundingRadius)) continue;
-
-			const modelMatrix = entity.getModelMatrix();
-			this.shader.setUniformMatrix4fv("u_model", modelMatrix);
-
-			// Bind texture if available
-			if (entity.mesh.texture) {
-				gl.activeTexture(gl.TEXTURE4); // Use slot 4 (0-3 are for shadow maps)
-				gl.bindTexture(gl.TEXTURE_2D, entity.mesh.texture);
-				this.shader.setUniform1i("u_texture", 4);
-				this.shader.setUniform1i("u_useTexture", 1);
-			} else {
-				this.shader.setUniform1i("u_useTexture", 0);
-			}
-
-			entity.mesh.bind();
-			gl.drawElements(
-				gl.TRIANGLES,
-				entity.mesh.indexCount,
-				gl.UNSIGNED_SHORT,
-				0,
-			);
-			entity.mesh.unbind();
-		}
 	}
 }

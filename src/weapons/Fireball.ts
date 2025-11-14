@@ -1,9 +1,9 @@
 import { vec3 } from "gl-matrix";
-import type { Enemy } from "./Enemy";
-import { Explosion } from "./Explosion";
-import { Particle } from "./Particle";
-import type { ParticleSystem } from "./ParticleSystem";
-import { Projectile } from "./Projectile";
+import type { Enemy } from "../enemies/Enemy.ts";
+import { Explosion } from "./Explosion.ts";
+import { Projectile } from "./Projectile.ts";
+import { Particle } from "../vfx/Particle.ts";
+import type { ParticleSystem } from "../vfx/ParticleSystem.ts";
 
 export class Fireball extends Projectile {
 	private particleSystem: ParticleSystem;

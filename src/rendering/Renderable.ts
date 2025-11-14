@@ -1,5 +1,5 @@
 import type { mat4, quat, vec3 } from "gl-matrix";
-import type { Mesh } from "./Mesh.ts";
+import type { Mesh } from "../assets/Mesh.ts";
 
 /**
  * Interface for objects that can be rendered in the scene
