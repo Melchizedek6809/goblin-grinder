@@ -32,6 +32,7 @@ export class Enemy {
 	private deathTimer: number = 0; // Time spent in death state (seconds)
 	private deathDuration: number = 2.0; // How long to stay in death state before despawn
 	private sinkSpeed: number = 0.5; // How fast to sink into ground (units/second)
+	public rewardGranted: boolean = false; // Track if points/coins have been awarded for this enemy
 
 	// Movement parameters
 	public moveSpeed: number = 1.5; // Base movement speed (slower than player's 3.0)

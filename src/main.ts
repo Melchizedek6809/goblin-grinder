@@ -9,7 +9,6 @@ import { DebugRenderer } from "./DebugRenderer.ts";
 import type { Enemy } from "./Enemy.ts";
 import { Entity } from "./Entity.ts";
 import type { Explosion } from "./Explosion.ts";
-import type { Pickup } from "./Pickup.ts";
 import { CompositeInput } from "./input/CompositeInput.ts";
 import type { InputSource } from "./input/InputSource.ts";
 import { KeyboardInput } from "./input/KeyboardInput.ts";
@@ -20,6 +19,7 @@ import { Mesh } from "./Mesh.ts";
 import { MeshAtlas } from "./MeshAtlas.ts";
 import { NoiseTexture } from "./NoiseTexture.ts";
 import { ParticleSystem } from "./ParticleSystem.ts";
+import type { Pickup } from "./Pickup.ts";
 import { Player } from "./Player.ts";
 import type { Projectile } from "./Projectile.ts";
 import { createSphereCollider } from "./physics/Collider.ts";
@@ -666,7 +666,7 @@ export class Game {
 				}
 			}
 
-			// Remove despawned enemies and update score
+			// Remove despawned enemies (points/coins already awarded on death)
 			const despawnedEnemies: Enemy[] = [];
 			this.enemies = this.enemies.filter((enemy) => {
 				if (enemy.shouldDespawn()) {
@@ -676,36 +676,12 @@ export class Game {
 				return true;
 			});
 
-			// Update score for killed enemies
-			if (despawnedEnemies.length > 0) {
-				this.score += despawnedEnemies.length * 100; // 100 points per kill
-
-				// Spawn coins from killed enemies (50% chance)
-				if (this.cachedAtlas) {
-					for (const enemy of despawnedEnemies) {
-						if (Math.random() < 0.5) {
-							// 50% chance to drop a coin
-							const enemyPos = enemy.getPosition();
-							const coinAmount = Math.floor(Math.random() * 3) + 1; // 1-3 coins
-							Coin.spawn(
-								this,
-								this.cachedAtlas,
-								coinAmount,
-								enemyPos[0],
-								0.3,
-								enemyPos[2],
-							);
-						}
-					}
-				}
-
-				// Remove entities belonging to despawned enemies
-				for (const enemy of despawnedEnemies) {
-					for (const entity of enemy.entities) {
-						const idx = this.entities.indexOf(entity);
-						if (idx >= 0) {
-							this.entities.splice(idx, 1);
-						}
+			// Remove entities belonging to despawned enemies
+			for (const enemy of despawnedEnemies) {
+				for (const entity of enemy.entities) {
+					const idx = this.entities.indexOf(entity);
+					if (idx >= 0) {
+						this.entities.splice(idx, 1);
 					}
 				}
 			}
@@ -719,6 +695,30 @@ export class Game {
 		) {
 			for (const enemy of this.enemies) {
 				enemy.update(this.player);
+			}
+
+			// Award points and drop coins for enemies that just entered death state
+			for (const enemy of this.enemies) {
+				if (enemy.getState() === "death" && !enemy.rewardGranted) {
+					enemy.rewardGranted = true;
+					this.score += 100; // 100 points per kill
+
+					// Spawn coins from killed enemies (50% chance)
+					if (this.cachedAtlas && Math.random() < 0.5) {
+						// 50% chance to drop a coin
+						const enemyPos = enemy.getPosition();
+						const coinAmount = Math.floor(Math.random() * 3) + 1; // 1-3 coins
+						Coin.spawn(
+							this,
+							this.cachedAtlas,
+							coinAmount,
+							enemyPos[0],
+							0.3,
+							enemyPos[2],
+							true, // Play spawn animation
+						);
+					}
+				}
 			}
 		}
 	}

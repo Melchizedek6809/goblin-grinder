@@ -7,10 +7,10 @@ import coinGlbUrl from "./assets/models/Coin.glb?url";
 import coinStackLargeGlbUrl from "./assets/models/CoinStackLarge.glb?url";
 import coinStackMediumGlbUrl from "./assets/models/CoinStackMedium.glb?url";
 import coinStackSmallGlbUrl from "./assets/models/CoinStackSmall.glb?url";
+import dungeonPngUrl from "./assets/models/Dungeon.png";
 // Static imports for Vite bundling
 // Note: ?url suffix tells Vite to treat these as URL assets
 import mageGlbUrl from "./assets/models/Mage.glb?url";
-import dungeonPngUrl from "./assets/models/Dungeon.png";
 import magePngUrl from "./assets/models/Mage.png";
 import naturePngUrl from "./assets/models/Nature.png";
 import rock1AGlbUrl from "./assets/models/Rock1A.glb?url";

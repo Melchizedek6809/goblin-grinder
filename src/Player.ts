@@ -166,8 +166,7 @@ export class Player {
 	): void {
 		// Check if player is moving (velocity magnitude > threshold)
 		const speed = Math.sqrt(
-			this.velocity[0] * this.velocity[0] +
-				this.velocity[2] * this.velocity[2],
+			this.velocity[0] * this.velocity[0] + this.velocity[2] * this.velocity[2],
 		);
 
 		// Only spawn particles if moving at a decent speed

@@ -1,6 +1,6 @@
 import { vec3 } from "gl-matrix";
-import type { Game } from "./main.ts";
 import type { MeshAtlas } from "./MeshAtlas.ts";
+import type { Game } from "./main.ts";
 import { Particle } from "./Particle.ts";
 import { Pickup } from "./Pickup.ts";
 
@@ -12,12 +12,21 @@ export class Coin extends Pickup {
 
 	private static readonly MERGE_DISTANCE = 1.0; // Distance to merge coins
 
+	// Spawn animation
+	private isSpawnAnimating: boolean = false;
+	private spawnAnimationTime: number = 0;
+	private spawnAnimationDuration: number = 0.8; // 0.8 seconds for spawn animation
+	private spawnJumpHeight: number = 1.0; // How high to jump
+	private targetScale: number = 0.5; // Final scale after animation
+	private baseY: number = 0.3; // Base Y position (matches Pickup's baseY)
+
 	constructor(
 		meshAtlas: MeshAtlas,
 		amount: number,
 		x: number,
 		y: number,
 		z: number,
+		playSpawnAnimation: boolean = false,
 	) {
 		// Select initial mesh based on amount
 		const mesh = Coin.getMeshForAmount(meshAtlas, amount);
@@ -26,8 +35,14 @@ export class Coin extends Pickup {
 		this.amount = amount;
 		this.meshAtlas = meshAtlas;
 
-		// Scale coins to be smaller
-		this.setUniformScale(0.5);
+		// If spawn animation is enabled, start at scale 0
+		if (playSpawnAnimation) {
+			this.isSpawnAnimating = true;
+			this.setUniformScale(0);
+		} else {
+			// Scale coins to be smaller
+			this.setUniformScale(0.5);
+		}
 	}
 
 	/**
@@ -65,6 +80,38 @@ export class Coin extends Pickup {
 	 * Override update to add particle effects for stacks
 	 */
 	public update(deltaTime: number, game: Game): boolean {
+		// Handle spawn animation
+		if (this.isSpawnAnimating) {
+			this.spawnAnimationTime += deltaTime;
+			const t = Math.min(
+				this.spawnAnimationTime / this.spawnAnimationDuration,
+				1.0,
+			);
+
+			// Ease-out cubic for smooth scaling
+			const easeT = 1 - (1 - t) ** 3;
+			this.setUniformScale(easeT * this.targetScale);
+
+			// Parabolic jump: starts at 0 (ground), peaks at spawnJumpHeight, lands at baseY
+			// Using quadratic: y = at^2 + bt where a and b are calculated to hit these points
+			const peak = this.spawnJumpHeight;
+			const base = this.baseY;
+			const a = -4 * (peak - 0.5 * base);
+			const b = 4 * peak - base;
+			const jumpY = a * t * t + b * t;
+			this.position[1] = jumpY;
+
+			// End spawn animation
+			if (t >= 1.0) {
+				this.isSpawnAnimating = false;
+				this.setUniformScale(this.targetScale);
+				// Position will be set to baseY, and parent update will handle bobbing from there
+			}
+
+			// Don't run parent update during spawn animation
+			return false;
+		}
+
 		// Call parent update (returns true if should be removed)
 		const shouldRemove = super.update(deltaTime, game);
 		if (shouldRemove) return true;
@@ -199,6 +246,7 @@ export class Coin extends Pickup {
 	 * @param x X position
 	 * @param y Y position
 	 * @param z Z position
+	 * @param playSpawnAnimation Whether to play the spawn animation (default: false)
 	 * @returns The coin that was spawned or merged into
 	 */
 	public static spawn(
@@ -208,6 +256,7 @@ export class Coin extends Pickup {
 		x: number,
 		y: number,
 		z: number,
+		playSpawnAnimation: boolean = false,
 	): Coin {
 		// Check if there's already a coin nearby
 		for (const pickup of game.pickups) {
@@ -217,15 +266,15 @@ export class Coin extends Pickup {
 				const distance = Math.sqrt(dx * dx + dz * dz);
 
 				if (distance < Coin.MERGE_DISTANCE) {
-					// Merge into existing coin
+					// Merge into existing coin (no animation when merging)
 					pickup.addAmount(amount);
 					return pickup;
 				}
 			}
 		}
 
-		// No nearby coin found, create a new one
-		const coin = new Coin(meshAtlas, amount, x, y, z);
+		// No nearby coin found, create a new one with animation
+		const coin = new Coin(meshAtlas, amount, x, y, z, playSpawnAnimation);
 		game.pickups.push(coin);
 		game.entities.push(coin);
 		return coin;

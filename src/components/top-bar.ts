@@ -1,5 +1,5 @@
 import { css, html, LitElement } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 
 @customElement("top-bar")
 export class TopBar extends LitElement {
@@ -20,6 +20,18 @@ export class TopBar extends LitElement {
 
 	@property({ type: Boolean })
 	visible = true;
+
+	@state()
+	private previousScore = 0;
+
+	@state()
+	private previousCoins = 0;
+
+	@state()
+	private animatingScoreDigits = new Set<number>();
+
+	@state()
+	private animatingCoinDigits = new Set<number>();
 
 	static styles = css`
 		:host {
@@ -110,6 +122,28 @@ export class TopBar extends LitElement {
 			color: #ffd700; /* Gold color for coins */
 		}
 
+		/* Digit animation */
+		.digit {
+			display: inline-block;
+			transition: transform 0.1s ease-out;
+		}
+
+		.digit.pulse {
+			animation: pulse 0.15s ease-out;
+		}
+
+		@keyframes pulse {
+			0% {
+				transform: scale(1);
+			}
+			50% {
+				transform: scale(1.5);
+			}
+			100% {
+				transform: scale(1);
+			}
+		}
+
 		/* FPS display */
 		.fps-container {
 			background-color: rgba(0, 0, 0, 0.7);
@@ -195,6 +229,71 @@ export class TopBar extends LitElement {
 		}
 	`;
 
+	updated(changedProperties: Map<string, unknown>) {
+		// Check if score changed
+		if (changedProperties.has("score") && this.score !== this.previousScore) {
+			this.detectChangedDigits(
+				this.previousScore,
+				this.score,
+				this.animatingScoreDigits,
+			);
+			this.previousScore = this.score;
+
+			// Clear animation after animation duration
+			setTimeout(() => {
+				this.animatingScoreDigits.clear();
+				this.requestUpdate();
+			}, 150);
+		}
+
+		// Check if coins changed
+		if (changedProperties.has("coins") && this.coins !== this.previousCoins) {
+			this.detectChangedDigits(
+				this.previousCoins,
+				this.coins,
+				this.animatingCoinDigits,
+			);
+			this.previousCoins = this.coins;
+
+			// Clear animation after animation duration
+			setTimeout(() => {
+				this.animatingCoinDigits.clear();
+				this.requestUpdate();
+			}, 150);
+		}
+	}
+
+	private detectChangedDigits(
+		oldValue: number,
+		newValue: number,
+		animatingSet: Set<number>,
+	) {
+		const oldStr = oldValue.toString();
+		const newStr = newValue.toString();
+		const maxLength = Math.max(oldStr.length, newStr.length);
+
+		// Compare from right to left (least significant to most significant)
+		for (let i = 0; i < maxLength; i++) {
+			const oldDigit = oldStr[oldStr.length - 1 - i] || "";
+			const newDigit = newStr[newStr.length - 1 - i] || "";
+
+			if (oldDigit !== newDigit) {
+				// Mark this position (from the right) as animating
+				animatingSet.add(newStr.length - 1 - i);
+			}
+		}
+	}
+
+	private renderNumber(value: number, animatingDigits: Set<number>) {
+		const str = value.toString();
+		return html`${str.split("").map((digit, index) => {
+			const shouldAnimate = animatingDigits.has(index);
+			return html`<span class="digit ${shouldAnimate ? "pulse" : ""}"
+				>${digit}</span
+			>`;
+		})}`;
+	}
+
 	render() {
 		if (!this.visible) {
 			return html``;
@@ -228,13 +327,17 @@ export class TopBar extends LitElement {
 					<div class="hearts">${hearts}</div>
 				</div>
 				<div class="score-section">
-					<div class="score-container">Score: ${this.score}</div>
+					<div class="score-container">
+						Score: ${this.renderNumber(this.score, this.animatingScoreDigits)}
+					</div>
 				</div>
 				<div class="fps-section">
 					<div class="fps-container">FPS: ${Math.round(this.fps)}</div>
 				</div>
 				<div class="coins-section">
-					<div class="coins-container">Coins: ${this.coins}</div>
+					<div class="coins-container">
+						Coins: ${this.renderNumber(this.coins, this.animatingCoinDigits)}
+					</div>
 				</div>
 			</div>
 		`;
