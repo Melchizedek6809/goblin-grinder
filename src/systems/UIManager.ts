@@ -2,6 +2,7 @@ import type { GameOverScreen } from "../components/game-over-screen.ts";
 import type { LevelUpModal } from "../components/level-up-modal.ts";
 import type { MainMenu } from "../components/main-menu.ts";
 import type { TopBar } from "../components/top-bar.ts";
+import type { Upgrade } from "./UpgradeSystem.ts";
 
 export const GameState = {
 	MENU: 0,
@@ -154,11 +155,12 @@ export class UIManager {
 		this.fpsUpdateCounter = 0;
 	}
 
-	showLevelUpModal(optionElements: HTMLElement[]): void {
+	showLevelUpModal(upgrades: Upgrade[], mysteryUpgrade: Upgrade): void {
 		if (!this.levelUpModal) {
 			return;
 		}
-		this.setLevelUpOptions(optionElements);
+		this.levelUpModal.upgrades = upgrades;
+		this.levelUpModal.mysteryUpgrade = mysteryUpgrade;
 		this.levelUpModal.visible = true;
 	}
 
@@ -167,25 +169,15 @@ export class UIManager {
 			return;
 		}
 		this.levelUpModal.visible = false;
-		this.clearLevelUpOptions();
 	}
 
-	private setLevelUpOptions(optionElements: HTMLElement[]): void {
+	setupUpgradeListener(callback: (upgrade: Upgrade) => void): void {
 		if (!this.levelUpModal) {
 			return;
 		}
-		this.clearLevelUpOptions();
-		for (const element of optionElements) {
-			this.levelUpModal.append(element);
-		}
-	}
-
-	private clearLevelUpOptions(): void {
-		if (!this.levelUpModal) {
-			return;
-		}
-		while (this.levelUpModal.firstChild) {
-			this.levelUpModal.removeChild(this.levelUpModal.firstChild);
-		}
+		this.levelUpModal.addEventListener("upgrade-selected", (e) => {
+			const event = e as CustomEvent;
+			callback(event.detail.upgrade);
+		});
 	}
 }

@@ -26,6 +26,7 @@ import { EntityManager } from "./systems/EntityManager.ts";
 import { ProjectileManager } from "./systems/ProjectileManager.ts";
 import { RewardSystem } from "./systems/RewardSystem.ts";
 import { GameState, UIManager } from "./systems/UIManager.ts";
+import { UpgradeSystem } from "./systems/UpgradeSystem.ts";
 import { ParticleSystem } from "./vfx/ParticleSystem.ts";
 import { FireballWeapon } from "./weapons/FireballWeapon.ts";
 import fragmentShaderSource from "./shaders/basic.frag?raw";
@@ -131,6 +132,11 @@ export class Game {
 				() => this.restartGame(),
 				() => this.backToMenu(),
 			);
+
+			// Listen for upgrade selection
+			this.uiManager.setupUpgradeListener((upgrade) => {
+				this.handleUpgradeSelected(upgrade);
+			});
 
 			// Check for skipMenu URL parameter
 			const urlParams = new URLSearchParams(window.location.search);
@@ -722,62 +728,29 @@ export class Game {
 		if (!this.player) return;
 		this.setPaused(true);
 
-		const increaseHpButton = this.createLevelUpButton(
-			"❤️ Increase Max HP",
-			() => {
-				if (!this.player) return;
-				this.player.increaseMaxHealth(20);
-			},
+		// Get 3 random upgrades for the visible cards
+		const visibleUpgrades = UpgradeSystem.getRandomUpgrades(3);
+
+		// Get 1 mystery upgrade (potentially weighted toward rarity)
+		const mysteryUpgrade = UpgradeSystem.getRandomUpgrade(
+			visibleUpgrades.map((u) => u.id),
+			true, // Weight toward higher rarity
 		);
 
-		const increaseMoveSpeedButton = this.createLevelUpButton(
-			"⚡ Increase Move Speed (+15%)",
-			() => {
-				if (!this.player) return;
-				this.player.increaseSpeedMultiplier(0.15);
-			},
-		);
-
-		const increaseAttackSpeedButton = this.createLevelUpButton(
-			"🏹 Increase Attack Speed (+20%)",
-			() => {
-				if (!this.player) return;
-				this.player.increaseAttackSpeedMultiplier(0.2);
-			},
-		);
-
-		const increaseDamageButton = this.createLevelUpButton(
-			"💥 Increase Damage (+25%)",
-			() => {
-				if (!this.player) return;
-				this.player.increaseDamageMultiplier(0.25);
-			},
-		);
-
-		this.uiManager.showLevelUpModal([
-			increaseHpButton,
-			increaseMoveSpeedButton,
-			increaseAttackSpeedButton,
-			increaseDamageButton,
-		]);
+		// Show the modal with upgrades
+		this.uiManager.showLevelUpModal(visibleUpgrades, mysteryUpgrade);
 	}
 
-	private createLevelUpButton(
-		label: string,
-		onSelect: () => void,
-	): HTMLButtonElement {
-		const button = document.createElement("button");
-		button.textContent = label;
-		button.addEventListener("click", () => {
-			this.applyLevelUpChoice(onSelect);
-		});
-		return button;
-	}
-
-	private applyLevelUpChoice(onSelect: () => void): void {
+	private handleUpgradeSelected(upgrade: any): void {
 		if (!this.player) return;
-		onSelect();
+
+		// Apply the upgrade effect
+		upgrade.effect(this.player);
+
+		// Level up the player
 		this.player.levelUp();
+
+		// Hide modal and unpause
 		this.uiManager.hideLevelUpModal();
 		this.setPaused(false);
 	}

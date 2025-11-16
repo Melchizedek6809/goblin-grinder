@@ -24,6 +24,9 @@ export class Player {
 	public speedMultiplier: number = 1.0; // Multiply speed for gameplay effects (buffs/debuffs)
 	public attackSpeedMultiplier: number = 1.0; // Scales weapon cooldowns (higher = faster)
 	public damageMultiplier: number = 1.0; // Boosts outgoing damage
+	public healthRegenRate: number = 0; // HP recovered per second
+	public knockbackPower: number = 1.0; // Multiplier for knockback strength
+	public coinMagnetRange: number = 1.0; // Multiplier for coin collection radius
 
 	// Health
 	public health: number = 100;
@@ -176,6 +179,14 @@ export class Player {
 	}
 
 	update(deltaTime: number, particleSystem?: ParticleSystem): void {
+		// Apply health regeneration
+		if (this.healthRegenRate > 0 && this.health < this.maxHealth) {
+			this.health = Math.min(
+				this.maxHealth,
+				this.health + this.healthRegenRate * deltaTime,
+			);
+		}
+
 		// Spawn walking particles if moving
 		if (particleSystem) {
 			this.spawnWalkingParticles(deltaTime, particleSystem);
@@ -334,6 +345,27 @@ export class Player {
 		);
 	}
 
+	increaseHealthRegenRate(amount: number): void {
+		this.healthRegenRate += amount;
+		console.log(
+			`Health regen rate increased to ${this.healthRegenRate.toFixed(2)} HP/s`,
+		);
+	}
+
+	increaseKnockbackPower(amount: number): void {
+		this.knockbackPower += amount;
+		console.log(
+			`Knockback power increased to ${this.knockbackPower.toFixed(2)}x`,
+		);
+	}
+
+	increaseCoinMagnetRange(amount: number): void {
+		this.coinMagnetRange += amount;
+		console.log(
+			`Coin magnet range increased to ${this.coinMagnetRange.toFixed(2)}x`,
+		);
+	}
+
 	getModifiedAttackCooldown(baseCooldown: number): number {
 		const multiplier = Math.max(this.attackSpeedMultiplier, 0.01);
 		return baseCooldown / multiplier;
@@ -347,5 +379,8 @@ export class Player {
 		this.speedMultiplier = 1.0;
 		this.attackSpeedMultiplier = 1.0;
 		this.damageMultiplier = 1.0;
+		this.healthRegenRate = 0;
+		this.knockbackPower = 1.0;
+		this.coinMagnetRange = 1.0;
 	}
 }
