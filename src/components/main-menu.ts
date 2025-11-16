@@ -6,6 +6,9 @@ export class MainMenu extends LitElement {
 	@property({ type: Boolean, reflect: true })
 	visible = true;
 
+	@property({ type: Boolean })
+	loading = false;
+
 	static styles = css`
 		:host {
 			display: block;
@@ -189,6 +192,18 @@ export class MainMenu extends LitElement {
 			transform: translateY(-1px);
 		}
 
+		.button:disabled {
+			opacity: 0.7;
+			cursor: not-allowed;
+		}
+
+		.button:disabled:hover {
+			transform: none;
+			box-shadow:
+				0 12px 30px rgba(0, 0, 0, 0.5),
+				0 0 18px rgba(25, 212, 157, 0.55);
+		}
+
 		.hints {
 			display: grid;
 			grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -264,8 +279,9 @@ export class MainMenu extends LitElement {
 					<button
 						class="button"
 						type="button"
+						?disabled=${this.loading}
 						@click=${this.handleStartGame}
-					>Start Game</button>
+					>${this.loading ? "Loading..." : "Start Game"}</button>
 				</div>
 			</div>
 		`;

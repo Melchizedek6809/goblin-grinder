@@ -94,6 +94,9 @@ export class Game {
 	// Cache for loaded assets (to avoid reloading on restart)
 	private cachedAtlas: MeshAtlas | null = null;
 
+	// Background asset loading
+	private assetsLoadingPromise: Promise<void> | null = null;
+
 	// Public getters for systems (for compatibility with existing code)
 	public get pickups() {
 		return this.rewardSystem.getMutablePickups();
@@ -137,6 +140,9 @@ export class Game {
 			} else {
 				// Initialize UI state (show menu)
 				this.uiManager.updateVisibility(this.gameState);
+
+				// Start loading assets in the background
+				this.startBackgroundLoading();
 			}
 		});
 
@@ -185,6 +191,45 @@ export class Game {
 				"WebGL2 is not supported on this device. Please use a modern browser.",
 			);
 		}
+	}
+
+	/**
+	 * Preload game assets in the background
+	 */
+	private async preloadAssets(): Promise<void> {
+		if (!this.gl) {
+			throw new Error("WebGL2 context not initialized");
+		}
+
+		// If assets are already cached, no need to load
+		if (this.cachedAtlas) {
+			return;
+		}
+
+		const gl = this.gl;
+		const atlas = new MeshAtlas();
+		await atlas.init(gl);
+		this.cachedAtlas = atlas;
+	}
+
+	/**
+	 * Start background loading and update UI state
+	 */
+	private startBackgroundLoading(): void {
+		// Set loading state on main menu
+		this.uiManager.setMainMenuLoading(true);
+
+		// Start loading assets
+		this.assetsLoadingPromise = this.preloadAssets()
+			.then(() => {
+				// Loading complete, update UI
+				this.uiManager.setMainMenuLoading(false);
+			})
+			.catch((error) => {
+				console.error("Failed to preload assets:", error);
+				this.uiManager.setMainMenuLoading(false);
+				// Don't show alert here - will handle error when user clicks Start Game
+			});
 	}
 
 	/**
@@ -370,6 +415,13 @@ export class Game {
 	 */
 	private async startGame() {
 		try {
+			// If assets are still loading, wait for them
+			if (this.assetsLoadingPromise) {
+				this.uiManager.setMainMenuLoading(true);
+				await this.assetsLoadingPromise;
+				this.uiManager.setMainMenuLoading(false);
+			}
+
 			await this.initScene();
 			this.setPaused(false);
 			this.uiManager.hideLevelUpModal();

@@ -154,3 +154,4 @@ The renderer uses a multi-pass approach:
 - Camera follows player position, not hardcoded to specific coordinates
 - Player rotation automatically faces movement direction
 - Spring physics used for camera follow and rotation for dynamic feel
+- Never start a dev server yourself, I have one always running in another terminal

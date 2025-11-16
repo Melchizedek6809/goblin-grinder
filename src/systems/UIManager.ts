@@ -89,6 +89,15 @@ export class UIManager {
 	}
 
 	/**
+	 * Set loading state on main menu
+	 */
+	setMainMenuLoading(loading: boolean): void {
+		if (this.mainMenu) {
+			this.mainMenu.loading = loading;
+		}
+	}
+
+	/**
 	 * Update game over screen with final score
 	 */
 	showGameOver(score: number): void {
