@@ -33,6 +33,7 @@ import fragmentShaderSource from "./shaders/basic.frag?raw";
 import vertexShaderSource from "./shaders/basic.vert?raw";
 import depthFragmentShaderSource from "./shaders/depth.frag?raw";
 import depthVertexShaderSource from "./shaders/depth.vert?raw";
+import depthSkinnedVertexShaderSource from "./shaders/depth-skinned.vert?raw";
 import particleFragmentShaderSource from "./shaders/particle.frag?raw";
 import particleVertexShaderSource from "./shaders/particle.vert?raw";
 import skinnedFragmentShaderSource from "./shaders/skinned.frag?raw";
@@ -65,6 +66,7 @@ export class Game {
 	private shader: Shader | null = null;
 	private skinnedShader: Shader | null = null;
 	private depthShader: Shader | null = null;
+	private depthSkinnedShader: Shader | null = null;
 	private particleShader: Shader | null = null;
 	private renderer: Renderer | null = null;
 	private camera: Camera | null = null;
@@ -284,6 +286,11 @@ export class Game {
 				depthVertexShaderSource,
 				depthFragmentShaderSource,
 			);
+			this.depthSkinnedShader = new Shader(
+				gl,
+				depthSkinnedVertexShaderSource,
+				depthFragmentShaderSource,
+			);
 			this.particleShader = new Shader(
 				gl,
 				particleVertexShaderSource,
@@ -321,6 +328,7 @@ export class Game {
 		this.light = new Light(
 			gl,
 			this.depthShader,
+			this.depthSkinnedShader,
 			vec3.fromValues(2.93, 12, 10.93),
 			vec3.fromValues(0, 0, 0),
 			vec3.fromValues(1.0, 1.0, 0.95),
@@ -679,7 +687,7 @@ export class Game {
 			this.player
 		) {
 			for (const enemy of this.enemies) {
-				enemy.update(this.player);
+				enemy.update(this.player, this.fixedTimestep);
 			}
 
 			// Award points and drop coins for enemies that just entered death state

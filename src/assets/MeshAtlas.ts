@@ -89,28 +89,12 @@ export class MeshAtlas {
 	 * Call this once during initialization.
 	 */
 	async init(gl: WebGL2RenderingContext): Promise<void> {
-		// Load player model with animations
-		await this.loadPlayerWithAnimations(gl);
-
-		// Load enemy model with animations
-		await this.loadSkeletonWithAnimations(gl);
+		// Kick off all asset loads in parallel to minimize startup time
+		const playerPromise = this.loadPlayerWithAnimations(gl);
+		const skeletonPromise = this.loadSkeletonWithAnimations(gl);
 
 		// Load tree, rock, and bush models (all share the same Nature.png texture)
-		const [
-			tree3A,
-			tree3B,
-			tree3C,
-			tree4A,
-			tree4B,
-			tree4C,
-			rock1A,
-			rock1D,
-			rock1F,
-			rock1G,
-			bush2D,
-			bush2E,
-			bush2F,
-		] = await Promise.all([
+		const naturePromise = Promise.all([
 			Mesh.fromUrl(gl, tree3AGlbUrl, naturePngUrl),
 			Mesh.fromUrl(gl, tree3BGlbUrl, naturePngUrl),
 			Mesh.fromUrl(gl, tree3CGlbUrl, naturePngUrl),
@@ -124,33 +108,40 @@ export class MeshAtlas {
 			Mesh.fromUrl(gl, bush2DGlbUrl, naturePngUrl),
 			Mesh.fromUrl(gl, bush2EGlbUrl, naturePngUrl),
 			Mesh.fromUrl(gl, bush2FGlbUrl, naturePngUrl),
-		]);
-
-		this.tree3A = tree3A;
-		this.tree3B = tree3B;
-		this.tree3C = tree3C;
-		this.tree4A = tree4A;
-		this.tree4B = tree4B;
-		this.tree4C = tree4C;
-		this.rock1A = rock1A;
-		this.rock1D = rock1D;
-		this.rock1F = rock1F;
-		this.rock1G = rock1G;
-		this.bush2D = bush2D;
-		this.bush2E = bush2E;
-		this.bush2F = bush2F;
+		]).then(
+			([
+				tree3A,
+				tree3B,
+				tree3C,
+				tree4A,
+				tree4B,
+				tree4C,
+				rock1A,
+				rock1D,
+				rock1F,
+				rock1G,
+				bush2D,
+				bush2E,
+				bush2F,
+			]) => {
+				this.tree3A = tree3A;
+				this.tree3B = tree3B;
+				this.tree3C = tree3C;
+				this.tree4A = tree4A;
+				this.tree4B = tree4B;
+				this.tree4C = tree4C;
+				this.rock1A = rock1A;
+				this.rock1D = rock1D;
+				this.rock1F = rock1F;
+				this.rock1G = rock1G;
+				this.bush2D = bush2D;
+				this.bush2E = bush2E;
+				this.bush2F = bush2F;
+			},
+		);
 
 		// Load pickup models (all share the same Dungeon.png texture)
-		const [
-			chest,
-			chestGold,
-			coin,
-			coinStackSmall,
-			coinStackMedium,
-			coinStackLarge,
-			bottle,
-			shard,
-		] = await Promise.all([
+		const pickupsPromise = Promise.all([
 			Mesh.fromUrl(gl, chestGlbUrl, dungeonPngUrl),
 			Mesh.fromUrl(gl, chestGoldGlbUrl, dungeonPngUrl),
 			Mesh.fromUrl(gl, coinGlbUrl, dungeonPngUrl),
@@ -159,16 +150,34 @@ export class MeshAtlas {
 			Mesh.fromUrl(gl, coinStackLargeGlbUrl, dungeonPngUrl),
 			Mesh.fromUrl(gl, bottleGlbUrl, dungeonPngUrl),
 			Mesh.fromUrl(gl, shardGlbUrl, dungeonPngUrl),
-		]);
+		]).then(
+			([
+				chest,
+				chestGold,
+				coin,
+				coinStackSmall,
+				coinStackMedium,
+				coinStackLarge,
+				bottle,
+				shard,
+			]) => {
+				this.chest = chest;
+				this.chestGold = chestGold;
+				this.coin = coin;
+				this.coinStackSmall = coinStackSmall;
+				this.coinStackMedium = coinStackMedium;
+				this.coinStackLarge = coinStackLarge;
+				this.bottle = bottle;
+				this.shard = shard;
+			},
+		);
 
-		this.chest = chest;
-		this.chestGold = chestGold;
-		this.coin = coin;
-		this.coinStackSmall = coinStackSmall;
-		this.coinStackMedium = coinStackMedium;
-		this.coinStackLarge = coinStackLarge;
-		this.bottle = bottle;
-		this.shard = shard;
+		await Promise.all([
+			playerPromise,
+			skeletonPromise,
+			naturePromise,
+			pickupsPromise,
+		]);
 	}
 
 	/**

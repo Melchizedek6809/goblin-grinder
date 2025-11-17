@@ -23,6 +23,9 @@ export class SpawnManager {
 	private enemySpawnTimer: number = 0;
 	private enemySpawnInterval: number = 3.0; // Spawn every 3 seconds
 	private maxEnemies: number = 10;
+	private spawnMinDistance: number = 6.0;
+	private spawnMaxDistance: number = 8.0;
+	private despawnDistance: number = 30.0;
 
 	constructor(physics: Physics, gl: WebGL2RenderingContext) {
 		this.physics = physics;
@@ -41,13 +44,16 @@ export class SpawnManager {
 	): void {
 		if (!atlas || !player) return;
 
-			this.enemySpawnTimer += deltaTime;
+		// Remove enemies that drifted too far away to keep the action near the player
+		this.despawnDistantEnemies(player, entities, enemies);
 
-			if (
-				this.enemySpawnTimer >= this.enemySpawnInterval &&
-				enemies.length < this.maxEnemies
-			) {
-				this.enemySpawnTimer = 0;
+		this.enemySpawnTimer += deltaTime;
+
+		if (
+			this.enemySpawnTimer >= this.enemySpawnInterval &&
+			enemies.length < this.maxEnemies
+		) {
+			this.enemySpawnTimer = 0;
 
 			// Determine group size (1-3 enemies)
 			const groupSize = Math.min(
@@ -55,10 +61,12 @@ export class SpawnManager {
 				this.maxEnemies - enemies.length,
 			);
 
-			// Spawn at a random position 10-15 units away from player
+			// Spawn at a random position just outside the player's reach
 			const playerPos = player.getPosition();
 			const angle = Math.random() * Math.PI * 2;
-			const distance = 10 + Math.random() * 5;
+			const distance =
+				this.spawnMinDistance +
+				Math.random() * (this.spawnMaxDistance - this.spawnMinDistance);
 			const spawnX = playerPos[0] + Math.cos(angle) * distance;
 			const spawnZ = playerPos[2] + Math.sin(angle) * distance;
 			const safeSpawnX = clampWorldAxis(spawnX, ENEMY_SPAWN_BORDER_PADDING);
@@ -135,6 +143,40 @@ export class SpawnManager {
 				ENEMY_SPAWN_BORDER_PADDING,
 			);
 			this.spawnEnemy(atlas, x, -0.5, z, entities, enemies);
+		}
+	}
+
+	/**
+	 * Despawn enemies that are too far from the player (keeps action nearby)
+	 */
+	private despawnDistantEnemies(
+		player: Player,
+		entities: Renderable[],
+		enemies: Enemy[],
+	): void {
+		const playerPos = player.getPosition();
+		const maxDistanceSq = this.despawnDistance * this.despawnDistance;
+
+		for (let i = enemies.length - 1; i >= 0; i--) {
+			const enemy = enemies[i];
+			const enemyPos = enemy.getPosition();
+			const dx = enemyPos[0] - playerPos[0];
+			const dz = enemyPos[2] - playerPos[2];
+			const distSq = dx * dx + dz * dz;
+
+			if (distSq > maxDistanceSq) {
+				// Remove colliders from physics before dropping entities
+				for (const entity of enemy.entities) {
+					if (entity.collider) {
+						this.physics.removeCollider(entity.collider);
+					}
+					const idx = entities.indexOf(entity);
+					if (idx !== -1) {
+						entities.splice(idx, 1);
+					}
+				}
+				enemies.splice(i, 1);
+			}
 		}
 	}
 

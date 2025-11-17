@@ -1,10 +1,12 @@
 import { mat4, vec3 } from "gl-matrix";
 import type { Renderable } from "./Renderable.ts";
 import type { Shader } from "./Shader.ts";
+import { SkinnedMesh } from "../animation/SkinnedMesh.ts";
 
 export class Light {
 	private gl: WebGL2RenderingContext;
 	private depthShader: Shader;
+	private depthSkinnedShader: Shader | null;
 
 	public position: vec3;
 	public target: vec3;
@@ -27,12 +29,14 @@ export class Light {
 	constructor(
 		gl: WebGL2RenderingContext,
 		depthShader: Shader,
+		depthSkinnedShader: Shader | null,
 		position: vec3,
 		target: vec3,
 		color: vec3 = vec3.fromValues(1, 1, 1),
 	) {
 		this.gl = gl;
 		this.depthShader = depthShader;
+		this.depthSkinnedShader = depthSkinnedShader;
 		this.position = position;
 		this.target = target;
 		this.color = color;
@@ -141,20 +145,29 @@ export class Light {
 		gl.enable(gl.DEPTH_TEST);
 		gl.depthFunc(gl.LEQUAL);
 
-		// Use depth shader
-		this.depthShader.use();
-		this.depthShader.setUniformMatrix4fv(
-			"u_lightSpaceMatrix",
-			this.lightSpaceMatrix,
-		);
-
 		// Render all entities to shadow map
 		for (const entity of entities) {
 			// Skip entities without a mesh
 			if (!entity.mesh) continue;
 
+			const isSkinned = entity.mesh instanceof SkinnedMesh;
+			const shader = isSkinned && this.depthSkinnedShader
+				? this.depthSkinnedShader
+				: this.depthShader;
+
+			shader.use();
+			shader.setUniformMatrix4fv("u_lightSpaceMatrix", this.lightSpaceMatrix);
+
 			const modelMatrix = entity.getModelMatrix();
-			this.depthShader.setUniformMatrix4fv("u_model", modelMatrix);
+			shader.setUniformMatrix4fv("u_model", modelMatrix);
+
+			if (isSkinned && this.depthSkinnedShader) {
+				const skinnedMesh = entity.mesh as SkinnedMesh;
+				shader.setUniformMatrix4fvArray(
+					"u_jointMatrices",
+					skinnedMesh.skeleton.jointMatrices,
+				);
+			}
 
 			entity.mesh.bind();
 			gl.drawElements(

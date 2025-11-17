@@ -25,7 +25,6 @@ export class Enemy {
 	// AI state machine
 	private state: EnemyState = "idle";
 	private previousState: EnemyState = "idle"; // Track state changes for animation
-	private attackTimer: number = 0; // Counts fixed update ticks during attack
 	private animationController: AnimationController | null = null;
 
 	// Jump mechanics
@@ -52,10 +51,14 @@ export class Enemy {
 	public chaseStartRange: number = 8.0; // Start chasing when player is this close
 	public chaseEndRange: number = 10.0; // Stop chasing when player is this far (higher to avoid flickering)
 	public attackRange: number = 1.5; // Attack when player is this close
-	public attackDuration: number = 3; // Number of fixed update ticks to attack for
+	private attackWindupSeconds: number = 1.0; // Time from attack start until damage is applied
+	private attackCooldownSeconds: number = 0.6; // Time after an attack before a new one can start
 
 	// Combat
 	public attackDamage: number = 10; // Damage dealt to player per attack
+	private attackTimer: number = 0; // Counts down attack windup
+	private attackCooldownTimer: number = 0; // Prevents immediate re-attacks
+	private collidersRemoved: boolean = false;
 
 	constructor({
 		meshes,
@@ -157,7 +160,7 @@ export class Enemy {
 	 * Update AI logic (called at fixed timestep, e.g., 30fps)
 	 * State machine that controls enemy behavior based on player
 	 */
-	update(player: Player): void {
+	update(player: Player, deltaTime: number): void {
 		// Skip AI logic if dead or dying
 		if (this.state === "dead" || this.state === "dying") return;
 		const playerPosition = player.getPosition();
@@ -166,6 +169,14 @@ export class Enemy {
 		const toPlayer = vec3.create();
 		vec3.subtract(toPlayer, playerPosition, this.position);
 		const distanceToPlayer = vec3.length(toPlayer);
+
+		// Tick down attack timers
+		if (this.attackTimer > 0) {
+			this.attackTimer = Math.max(0, this.attackTimer - deltaTime);
+		}
+		if (this.attackCooldownTimer > 0) {
+			this.attackCooldownTimer = Math.max(0, this.attackCooldownTimer - deltaTime);
+		}
 
 		// State machine transitions
 		switch (this.state) {
@@ -190,9 +201,9 @@ export class Enemy {
 
 			case "chase":
 				// Transition: chase -> attack (player gets very close)
-				if (distanceToPlayer < this.attackRange) {
+				if (distanceToPlayer < this.attackRange && this.attackCooldownTimer <= 0) {
 					this.state = "attack";
-					this.attackTimer = this.attackDuration;
+					this.attackTimer = this.attackWindupSeconds;
 					vec3.set(this.goalVelocity, 0, 0, 0); // Stop moving
 					break;
 				}
@@ -226,15 +237,13 @@ export class Enemy {
 					this.rotation = Math.atan2(toPlayer[0], toPlayer[2]);
 				}
 
-				// Count down attack timer
-				this.attackTimer--;
-
 				// Transition: attack -> chase (attack duration finished)
 				if (this.attackTimer <= 0) {
 					// Check if player is still in range and deal damage
 					if (distanceToPlayer < this.attackRange) {
 						player.takeDamage(this.attackDamage);
 					}
+					this.attackCooldownTimer = this.attackCooldownSeconds;
 					this.state = "chase";
 				}
 				break;
@@ -312,9 +321,11 @@ export class Enemy {
 					this.state = "dead";
 					this.deathTimer = 0;
 					this.updateAnimations(); // switch to death pose loop
+					this.disableColliders(physics);
 				}
 			} else {
 				// dead state: loop pose and sink
+				this.disableColliders(physics);
 				this.deathTimer += deltaTime;
 				if (this.deathTimer <= this.deathDuration) {
 					this.position[1] -= this.sinkSpeed * deltaTime;
@@ -440,5 +451,23 @@ export class Enemy {
 
 	isDead(): boolean {
 		return this.state === "dead" || this.state === "dying";
+	}
+
+	/**
+	 * Disable and remove colliders once the enemy is fully dead
+	 */
+	private disableColliders(physics?: Physics): void {
+		if (this.collidersRemoved) {
+			return;
+		}
+
+		for (const entity of this.entities) {
+			if (entity.collider) {
+				entity.collider.enabled = false;
+				physics?.removeCollider(entity.collider);
+			}
+		}
+
+		this.collidersRemoved = true;
 	}
 }
