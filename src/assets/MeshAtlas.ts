@@ -25,12 +25,18 @@ import rock1DGlbUrl from "../assets/models/Rock1D.glb?url";
 import rock1FGlbUrl from "../assets/models/Rock1F.glb?url";
 import rock1GGlbUrl from "../assets/models/Rock1G.glb?url";
 import skeletonPngUrl from "../assets/models/Skeleton.png";
+import grass1AGlbUrl from "../assets/models/Grass1A.glb?url";
+import grass1BGlbUrl from "../assets/models/Grass1B.glb?url";
+import grass1CGlbUrl from "../assets/models/Grass1C.glb?url";
+import grass1DGlbUrl from "../assets/models/Grass1D.glb?url";
+import tree1AGlbUrl from "../assets/models/Tree1A.glb?url";
+import tree1BGlbUrl from "../assets/models/Tree1B.glb?url";
+import tree2AGlbUrl from "../assets/models/Tree2A.glb?url";
+import tree2BGlbUrl from "../assets/models/Tree2B.glb?url";
 import tree3AGlbUrl from "../assets/models/Tree3A.glb?url";
 import tree3BGlbUrl from "../assets/models/Tree3B.glb?url";
-import tree3CGlbUrl from "../assets/models/Tree3C.glb?url";
 import tree4AGlbUrl from "../assets/models/Tree4A.glb?url";
 import tree4BGlbUrl from "../assets/models/Tree4B.glb?url";
-import tree4CGlbUrl from "../assets/models/Tree4C.glb?url";
 import { Mesh } from "./Mesh.ts";
 import { GLBLoader, type GLTFData, type SkinnedMeshData } from "./GLBLoader.ts";
 import { SkinnedMesh } from "../animation/SkinnedMesh.ts";
@@ -56,12 +62,14 @@ export class MeshAtlas {
 	private skeletonTexture: WebGLTexture | null = null;
 
 	// Tree meshes (single mesh each)
+	public tree1A: Mesh | null = null;
+	public tree1B: Mesh | null = null;
+	public tree2A: Mesh | null = null;
+	public tree2B: Mesh | null = null;
 	public tree3A: Mesh | null = null;
 	public tree3B: Mesh | null = null;
-	public tree3C: Mesh | null = null;
 	public tree4A: Mesh | null = null;
 	public tree4B: Mesh | null = null;
-	public tree4C: Mesh | null = null;
 
 	// Rock meshes (single mesh each)
 	public rock1A: Mesh | null = null;
@@ -73,6 +81,12 @@ export class MeshAtlas {
 	public bush2D: Mesh | null = null;
 	public bush2E: Mesh | null = null;
 	public bush2F: Mesh | null = null;
+
+	// Grass meshes (single mesh each)
+	public grass1A: Mesh | null = null;
+	public grass1B: Mesh | null = null;
+	public grass1C: Mesh | null = null;
+	public grass1D: Mesh | null = null;
 
 	// Pickup meshes (single mesh each)
 	public chest: Mesh | null = null;
@@ -95,12 +109,14 @@ export class MeshAtlas {
 
 		// Load tree, rock, and bush models (all share the same Nature.png texture)
 		const naturePromise = Promise.all([
+			Mesh.fromUrl(gl, tree1AGlbUrl, naturePngUrl),
+			Mesh.fromUrl(gl, tree1BGlbUrl, naturePngUrl),
+			Mesh.fromUrl(gl, tree2AGlbUrl, naturePngUrl),
+			Mesh.fromUrl(gl, tree2BGlbUrl, naturePngUrl),
 			Mesh.fromUrl(gl, tree3AGlbUrl, naturePngUrl),
 			Mesh.fromUrl(gl, tree3BGlbUrl, naturePngUrl),
-			Mesh.fromUrl(gl, tree3CGlbUrl, naturePngUrl),
 			Mesh.fromUrl(gl, tree4AGlbUrl, naturePngUrl),
 			Mesh.fromUrl(gl, tree4BGlbUrl, naturePngUrl),
-			Mesh.fromUrl(gl, tree4CGlbUrl, naturePngUrl),
 			Mesh.fromUrl(gl, rock1AGlbUrl, naturePngUrl),
 			Mesh.fromUrl(gl, rock1DGlbUrl, naturePngUrl),
 			Mesh.fromUrl(gl, rock1FGlbUrl, naturePngUrl),
@@ -108,14 +124,20 @@ export class MeshAtlas {
 			Mesh.fromUrl(gl, bush2DGlbUrl, naturePngUrl),
 			Mesh.fromUrl(gl, bush2EGlbUrl, naturePngUrl),
 			Mesh.fromUrl(gl, bush2FGlbUrl, naturePngUrl),
+			Mesh.fromUrl(gl, grass1AGlbUrl, naturePngUrl),
+			Mesh.fromUrl(gl, grass1BGlbUrl, naturePngUrl),
+			Mesh.fromUrl(gl, grass1CGlbUrl, naturePngUrl),
+			Mesh.fromUrl(gl, grass1DGlbUrl, naturePngUrl),
 		]).then(
 			([
+				tree1A,
+				tree1B,
+				tree2A,
+				tree2B,
 				tree3A,
 				tree3B,
-				tree3C,
 				tree4A,
 				tree4B,
-				tree4C,
 				rock1A,
 				rock1D,
 				rock1F,
@@ -123,13 +145,19 @@ export class MeshAtlas {
 				bush2D,
 				bush2E,
 				bush2F,
+				grass1A,
+				grass1B,
+				grass1C,
+				grass1D,
 			]) => {
+				this.tree1A = tree1A;
+				this.tree1B = tree1B;
+				this.tree2A = tree2A;
+				this.tree2B = tree2B;
 				this.tree3A = tree3A;
 				this.tree3B = tree3B;
-				this.tree3C = tree3C;
 				this.tree4A = tree4A;
 				this.tree4B = tree4B;
-				this.tree4C = tree4C;
 				this.rock1A = rock1A;
 				this.rock1D = rock1D;
 				this.rock1F = rock1F;
@@ -137,6 +165,10 @@ export class MeshAtlas {
 				this.bush2D = bush2D;
 				this.bush2E = bush2E;
 				this.bush2F = bush2F;
+				this.grass1A = grass1A;
+				this.grass1B = grass1B;
+				this.grass1C = grass1C;
+				this.grass1D = grass1D;
 			},
 		);
 
@@ -343,12 +375,14 @@ export class MeshAtlas {
 	 */
 	getRandomTree(): Mesh {
 		const trees = [
+			this.tree1A,
+			this.tree1B,
+			this.tree2A,
+			this.tree2B,
 			this.tree3A,
 			this.tree3B,
-			this.tree3C,
 			this.tree4A,
 			this.tree4B,
-			this.tree4C,
 		].filter((t) => t !== null) as Mesh[];
 
 		return trees[Math.floor(Math.random() * trees.length)];
@@ -374,6 +408,20 @@ export class MeshAtlas {
 		) as Mesh[];
 
 		return bushes[Math.floor(Math.random() * bushes.length)];
+	}
+
+	/**
+	 * Get a random grass mesh for variety
+	 */
+	getRandomGrass(): Mesh {
+		const grass = [
+			this.grass1A,
+			this.grass1B,
+			this.grass1C,
+			this.grass1D,
+		].filter((g) => g !== null) as Mesh[];
+
+		return grass[Math.floor(Math.random() * grass.length)];
 	}
 
 	/**

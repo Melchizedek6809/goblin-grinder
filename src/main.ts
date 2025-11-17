@@ -11,6 +11,7 @@ import { MouseInput } from "./input/MouseInput.ts";
 import { TouchInput } from "./input/TouchInput.ts";
 import { Entity } from "./objects/Entity.ts";
 import { StaticBush } from "./objects/StaticBush.ts";
+import { StaticGrass } from "./objects/StaticGrass.ts";
 import { StaticRock } from "./objects/StaticRock.ts";
 import { StaticTree } from "./objects/StaticTree.ts";
 import { createSphereCollider } from "./physics/Collider.ts";
@@ -431,6 +432,20 @@ export class Game {
 				minScale: 0.7,
 				maxScale: 1.3,
 				// No collider - bushes are passable
+			},
+			this.entityManager.getMutableEntities(),
+		);
+
+		this.spawnManager.spawnStaticObjects(
+			() => new StaticGrass(atlas.getRandomGrass()),
+			60,
+			{
+				yOffset: -0.5,
+				minDistance: 2,
+				maxDistance: getPlayableRadius(SCENERY_BORDER_PADDING),
+				minScale: 0.8,
+				maxScale: 1.3,
+				// No collider - grass is fully walkable
 			},
 			this.entityManager.getMutableEntities(),
 		);
