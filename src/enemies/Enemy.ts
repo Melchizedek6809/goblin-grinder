@@ -300,7 +300,7 @@ export class Enemy {
 					break;
 				case "chase":
 					// Enemies move at a walking pace
-					this.animationController.play("Walking_A", true, blend);
+					this.animationController.play("Running_B", true, blend);
 					break;
 				case "attack":
 					// Use Throw as the closest punch/attack animation available
