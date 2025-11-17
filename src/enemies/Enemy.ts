@@ -21,7 +21,7 @@ const tmpOldPos = vec3.create();
 const tmpNewPos = vec3.create();
 const tmpMoveDir = vec3.create();
 const tmpActualMove = vec3.create();
-const rotationQuat = quat.create();
+const rotationQuat = quat.create(); // Shared scratch for converting yaw to quaternion
 
 export class Enemy {
 	public entities: Entity[];
@@ -117,7 +117,7 @@ export class Enemy {
 
 		for (const entity of this.entities) {
 			entity.setPosition(this.position[0], this.position[1], this.position[2]);
-			entity.rotation = rotationQuat;
+			quat.copy(entity.rotation, rotationQuat); // Copy to avoid sharing the scratch reference
 
 			// Update collider position if it exists
 			if (entity.collider) {
