@@ -39,7 +39,7 @@ export class Renderer {
 	): void {
 		// First pass: Render shadow map for the light
 		if (light) {
-			light.renderShadowMap(entities);
+			light.renderShadowMap(entities, time);
 		}
 
 		// Second pass: Render main scene

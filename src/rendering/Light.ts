@@ -131,7 +131,7 @@ export class Light {
 		return this.lightSpaceMatrix;
 	}
 
-	renderShadowMap(entities: ReadonlyArray<Renderable>): void {
+	renderShadowMap(entities: ReadonlyArray<Renderable>, time: number): void {
 		const gl = this.gl;
 
 		this.updateMatrices();
@@ -157,6 +157,7 @@ export class Light {
 					: this.depthShader;
 
 			shader.use();
+			shader.setUniform1f("u_time", time);
 			shader.setUniformMatrix4fv("u_lightSpaceMatrix", this.lightSpaceMatrix);
 
 			const modelMatrix = entity.getModelMatrix();

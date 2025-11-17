@@ -10,10 +10,6 @@ import { KeyboardInput } from "./input/KeyboardInput.ts";
 import { MouseInput } from "./input/MouseInput.ts";
 import { TouchInput } from "./input/TouchInput.ts";
 import { Entity } from "./objects/Entity.ts";
-import { StaticBush } from "./objects/StaticBush.ts";
-import { StaticGrass } from "./objects/StaticGrass.ts";
-import { StaticRock } from "./objects/StaticRock.ts";
-import { StaticTree } from "./objects/StaticTree.ts";
 import { createSphereCollider } from "./physics/Collider.ts";
 import { Physics } from "./physics/Physics.ts";
 import { Player } from "./objects/Player.ts";
@@ -39,11 +35,7 @@ import particleFragmentShaderSource from "./shaders/particle.frag?raw";
 import particleVertexShaderSource from "./shaders/particle.vert?raw";
 import skinnedFragmentShaderSource from "./shaders/skinned.frag?raw";
 import skinnedVertexShaderSource from "./shaders/skinned.vert?raw";
-import {
-	SCENERY_BORDER_PADDING,
-	WORLD_SIZE,
-	getPlayableRadius,
-} from "./systems/WorldBounds.ts";
+import { WORLD_SIZE } from "./systems/WorldBounds.ts";
 import "./components/top-bar.ts";
 import "./components/main-menu.ts";
 import "./components/game-over-screen.ts";
@@ -393,60 +385,9 @@ export class Game {
 			this.enemies,
 		);
 
-		// Spawn static objects
-		this.spawnManager.spawnStaticObjects(
-			() => new StaticTree(atlas.getRandomTree()),
-			30,
-			{
-				yOffset: -0.6,
-				minDistance: 5,
-				maxDistance: getPlayableRadius(SCENERY_BORDER_PADDING),
-				minScale: 0.8,
-				maxScale: 1.2,
-				colliderRadius: 0.5, // Trees have collision
-			},
-			this.entityManager.getMutableEntities(),
-		);
-
-		this.spawnManager.spawnStaticObjects(
-			() => new StaticRock(atlas.getRandomRock()),
-			20,
-			{
-				yOffset: -0.5,
-				minDistance: 3,
-				maxDistance: getPlayableRadius(SCENERY_BORDER_PADDING),
-				minScale: 0.6,
-				maxScale: 1.4,
-				colliderRadius: 0.6, // Rocks have collision
-			},
-			this.entityManager.getMutableEntities(),
-		);
-
-		this.spawnManager.spawnStaticObjects(
-			() => new StaticBush(atlas.getRandomBush()),
-			25,
-			{
-				yOffset: -0.4,
-				minDistance: 3,
-				maxDistance: getPlayableRadius(SCENERY_BORDER_PADDING),
-				minScale: 0.7,
-				maxScale: 1.3,
-				// No collider - bushes are passable
-			},
-			this.entityManager.getMutableEntities(),
-		);
-
-		this.spawnManager.spawnStaticObjects(
-			() => new StaticGrass(atlas.getRandomGrass()),
-			60,
-			{
-				yOffset: -0.5,
-				minDistance: 2,
-				maxDistance: getPlayableRadius(SCENERY_BORDER_PADDING),
-				minScale: 0.8,
-				maxScale: 1.3,
-				// No collider - grass is fully walkable
-			},
+		// Spawn static objects with noise-driven clustering for natural groupings
+		this.spawnManager.spawnNaturalScenery(
+			atlas,
 			this.entityManager.getMutableEntities(),
 		);
 	}

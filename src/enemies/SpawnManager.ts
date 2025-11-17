@@ -3,6 +3,10 @@ import type { StaticObject } from "../objects/StaticObject.ts";
 import { createSphereCollider } from "../physics/Collider.ts";
 import type { Physics } from "../physics/Physics.ts";
 import type { Player } from "../objects/Player.ts";
+import { StaticBush } from "../objects/StaticBush.ts";
+import { StaticGrass } from "../objects/StaticGrass.ts";
+import { StaticRock } from "../objects/StaticRock.ts";
+import { StaticTree } from "../objects/StaticTree.ts";
 import type { Renderable } from "../rendering/Renderable.ts";
 import { Enemy } from "./Enemy.ts";
 import {
@@ -11,6 +15,7 @@ import {
 	clampWorldAxis,
 	getPlayableRadius,
 } from "../systems/WorldBounds.ts";
+import { FractalNoise2D } from "../systems/Noise.ts";
 
 /**
  * Manages spawning of enemies and static objects
@@ -243,5 +248,306 @@ export class SpawnManager {
 	 */
 	reset(): void {
 		this.enemySpawnTimer = 0;
+	}
+
+	/**
+	 * Scatter static scenery using noise maps to create natural clumps of vegetation
+	 * and sparse clearings. Uses two noise fields: one for density and one to bias
+	 * bushes vs trees. A third field shapes where rocks show up (preferring low
+	 * vegetation areas).
+	 */
+	spawnNaturalScenery(atlas: MeshAtlas, entities: Renderable[]): void {
+		const playableRadius = getPlayableRadius(SCENERY_BORDER_PADDING);
+		const minDistanceFromOrigin = 3.5; // Keep a small clearing around the player spawn
+
+		// Noise fields controlling macro layout
+		const densityNoise = new FractalNoise2D(
+			Math.floor(Math.random() * 100000),
+			{ baseFrequency: 0.018, octaves: 5, gain: 0.55 },
+		);
+		const typeNoise = new FractalNoise2D(Math.floor(Math.random() * 100000), {
+			baseFrequency: 0.032,
+			octaves: 3,
+			gain: 0.5,
+		});
+		const rockNoise = new FractalNoise2D(Math.floor(Math.random() * 100000), {
+			baseFrequency: 0.025,
+			octaves: 4,
+			gain: 0.6,
+		});
+
+		type Placement = { x: number; z: number; radius: number };
+		const placements: Placement[] = [];
+
+		const attemptCount = 520;
+		for (let i = 0; i < attemptCount; i++) {
+			// Sample a candidate position across the playable ring
+			const angle = Math.random() * Math.PI * 2;
+			const distance =
+				minDistanceFromOrigin +
+				Math.random() * Math.max(0, playableRadius - minDistanceFromOrigin);
+			const x = clampWorldAxis(
+				Math.cos(angle) * distance,
+				SCENERY_BORDER_PADDING,
+			);
+			const z = clampWorldAxis(
+				Math.sin(angle) * distance,
+				SCENERY_BORDER_PADDING,
+			);
+
+			const density = densityNoise.sample(x, z); // 0 -> barren, 1 -> dense forest
+			const typeBias = typeNoise.sample(x + 100, z + 100);
+			const rockBias = rockNoise.sample(x - 50, z + 25);
+
+			const vegetationTier = this.getVegetationTier(density);
+			if (Math.random() > this.getCoverageChance(vegetationTier, density)) {
+				continue;
+			}
+
+			const spawnType = this.chooseVegetationType(
+				vegetationTier,
+				density,
+				typeBias,
+				rockBias,
+			);
+
+			if (!spawnType) continue;
+
+			switch (spawnType) {
+				case "grass": {
+					const grass = new StaticGrass(atlas.getRandomGrass());
+					this.placeStaticObject(
+						grass,
+						x,
+						z,
+						{
+							yOffset: -0.5,
+							scaleRange: [0.8, 1.25],
+							spacingRadius: 0.35,
+						},
+						placements,
+						entities,
+					);
+					break;
+				}
+				case "bush": {
+					const bush = new StaticBush(atlas.getRandomBush());
+					this.placeStaticObject(
+						bush,
+						x,
+						z,
+						{
+							yOffset: -0.4,
+							scaleRange: [0.8, 1.25],
+							spacingRadius: 0.6,
+						},
+						placements,
+						entities,
+					);
+					break;
+				}
+				case "tree": {
+					const tree = new StaticTree(atlas.getRandomTree());
+					// Taller, tighter trees in dense regions for a canopy feel
+					const scaleBoost = this.remap(density, 0.2, 1, 0.9, 1.25);
+					this.placeStaticObject(
+						tree,
+						x,
+						z,
+						{
+							yOffset: -0.6,
+							scaleRange: [0.8 * scaleBoost, 1.25 * scaleBoost],
+							colliderRadius: 0.5,
+							spacingRadius: 1.1,
+						},
+						placements,
+						entities,
+					);
+					break;
+				}
+				case "rock": {
+					const rock = new StaticRock(atlas.getRandomRock());
+					this.placeStaticObject(
+						rock,
+						x,
+						z,
+						{
+							yOffset: -0.5,
+							scaleRange: [0.7, 1.35],
+							colliderRadius: 0.6,
+							spacingRadius: 0.95,
+						},
+						placements,
+						entities,
+					);
+					break;
+				}
+			}
+		}
+	}
+
+	private getVegetationTier(
+		density: number,
+	): "clear" | "light" | "mixed" | "dense" {
+		if (density < 0.2) return "clear";
+		if (density < 0.45) return "light";
+		if (density < 0.7) return "mixed";
+		return "dense";
+	}
+
+	private getCoverageChance(
+		tier: "clear" | "light" | "mixed" | "dense",
+		density: number,
+	): number {
+		switch (tier) {
+			case "clear":
+				return 0.22 * (0.6 + density * 0.8);
+			case "light":
+				return 0.5 + density * 0.25;
+			case "mixed":
+				return 0.75 + density * 0.2;
+			case "dense":
+				return 0.9 + density * 0.08;
+		}
+	}
+
+	private remap(
+		value: number,
+		inMin: number,
+		inMax: number,
+		outMin: number,
+		outMax: number,
+	): number {
+		const clamped = Math.min(Math.max(value, inMin), inMax);
+		const t = (clamped - inMin) / (inMax - inMin);
+		return outMin + t * (outMax - outMin);
+	}
+
+	private chooseVegetationType(
+		tier: "clear" | "light" | "mixed" | "dense",
+		density: number,
+		typeBias: number,
+		rockBias: number,
+	): "grass" | "bush" | "tree" | "rock" | null {
+		const weights = {
+			grass: 0,
+			bush: 0,
+			tree: 0,
+			rock: 0,
+		};
+
+		switch (tier) {
+			case "clear":
+				weights.grass = 0.8;
+				weights.rock = 0.5;
+				weights.bush = 0.15;
+				weights.tree = 0.05;
+				break;
+			case "light":
+				weights.grass = 0.6;
+				weights.bush = 0.45;
+				weights.tree = 0.15;
+				weights.rock = 0.3;
+				break;
+			case "mixed":
+				weights.grass = 0.2;
+				weights.bush = 0.55;
+				weights.tree = 0.35;
+				weights.rock = 0.15;
+				break;
+			case "dense":
+				weights.grass = 0.08;
+				weights.bush = 0.32;
+				weights.tree = 0.6;
+				weights.rock = 0.05;
+				break;
+		}
+
+		// Tilt tree vs bush composition by noise for regional differences
+		const treeBias = 0.8 + typeBias * 0.6;
+		weights.tree *= treeBias;
+		weights.bush *= 1.4 - typeBias * 0.6;
+
+		// Rocks show up more when vegetation density is low
+		const rockFactor = (1 - density) * (0.6 + rockBias * 0.6);
+		weights.rock *= rockFactor;
+
+		// Keep some grasses everywhere to break up repetition
+		weights.grass *= 0.6 + (1 - typeBias) * 0.4;
+
+		const total = weights.grass + weights.bush + weights.tree + weights.rock;
+
+		if (total <= 0.0001) return null;
+
+		const roll = Math.random() * total;
+		if (roll < weights.grass) return "grass";
+		if (roll < weights.grass + weights.bush) return "bush";
+		if (roll < weights.grass + weights.bush + weights.tree) return "tree";
+		return "rock";
+	}
+
+	private placeStaticObject<T extends StaticObject>(
+		obj: T,
+		x: number,
+		z: number,
+		config: {
+			yOffset: number;
+			scaleRange: [number, number];
+			colliderRadius?: number;
+			spacingRadius?: number;
+		},
+		placements: { x: number; z: number; radius: number }[],
+		entities: Renderable[],
+	): void {
+		const scale =
+			config.scaleRange[0] +
+			Math.random() * (config.scaleRange[1] - config.scaleRange[0]);
+		const spacingRadius = (config.spacingRadius ?? 0) * scale;
+
+		if (
+			spacingRadius > 0 &&
+			!this.registerPlacement(x, z, spacingRadius, placements)
+		) {
+			return;
+		}
+
+		obj.setPosition(x, config.yOffset, z);
+		obj.setRotationFromEuler(0, Math.random() * 360, 0);
+		obj.setUniformScale(scale);
+
+		if (config.colliderRadius !== undefined) {
+			const collider = createSphereCollider(
+				obj.position,
+				config.colliderRadius * scale,
+				2,
+				0xffffffff,
+			);
+			obj.collider = collider;
+			this.physics.addCollider(collider);
+		}
+
+		if (spacingRadius > 0) {
+			placements.push({ x, z, radius: spacingRadius });
+		}
+
+		entities.push(obj);
+	}
+
+	private registerPlacement(
+		x: number,
+		z: number,
+		radius: number,
+		placements: { x: number; z: number; radius: number }[],
+	): boolean {
+		for (const placement of placements) {
+			const dx = placement.x - x;
+			const dz = placement.z - z;
+			const minDist = placement.radius + radius;
+			if (dx * dx + dz * dz < minDist * minDist) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 }
