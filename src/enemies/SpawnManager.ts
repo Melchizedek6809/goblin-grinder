@@ -440,24 +440,24 @@ export class SpawnManager {
 			case "clear":
 				weights.grass = 0.8;
 				weights.rock = 0.5;
-				weights.bush = 0.15;
+				weights.bush = 0.08;
 				weights.tree = 0.05;
 				break;
 			case "light":
 				weights.grass = 0.6;
-				weights.bush = 0.45;
-				weights.tree = 0.15;
+				weights.bush = 0.3;
+				weights.tree = 0.2;
 				weights.rock = 0.3;
 				break;
 			case "mixed":
 				weights.grass = 0.2;
-				weights.bush = 0.55;
+				weights.bush = 0.4;
 				weights.tree = 0.35;
 				weights.rock = 0.15;
 				break;
 			case "dense":
 				weights.grass = 0.08;
-				weights.bush = 0.32;
+				weights.bush = 0.22;
 				weights.tree = 0.6;
 				weights.rock = 0.05;
 				break;
@@ -466,7 +466,7 @@ export class SpawnManager {
 		// Tilt tree vs bush composition by noise for regional differences
 		const treeBias = 0.8 + typeBias * 0.6;
 		weights.tree *= treeBias;
-		weights.bush *= 1.4 - typeBias * 0.6;
+		weights.bush *= 1.1 - typeBias * 0.4;
 
 		// Rocks show up more when vegetation density is low
 		const rockFactor = (1 - density) * (0.6 + rockBias * 0.6);

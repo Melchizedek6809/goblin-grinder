@@ -19,6 +19,22 @@ uniform sampler2D u_noiseTexture;
 
 out vec4 fragColor;
 
+// Cheap 2D value noise to break up flat surfaces without sampling a texture
+float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+float valueNoise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    float a = hash(i);
+    float b = hash(i + vec2(1.0, 0.0));
+    float c = hash(i + vec2(0.0, 1.0));
+    float d = hash(i + vec2(1.0, 1.0));
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+
 // Sample cloud shadows from pre-computed noise texture
 float cloudShadow(vec2 worldPos, float time) {
     // Animate cloud movement by scrolling UV coordinates (massive, very slow-moving clouds)
@@ -82,6 +98,20 @@ void main() {
 
     // Get base color from texture or vertex color
     vec3 color = u_useTexture ? texture(u_texture, v_uv).rgb : v_color;
+
+    // Subtle, procedural breakup for flat ground planes (no texture required)
+    float groundMask = smoothstep(0.75, 0.95, normal.y); // only affect mostly-flat geometry
+    if (groundMask > 0.0) {
+        // Large-scale tonal drift plus a tiny animated grain
+        float macroNoise = valueNoise(v_worldPosition.xz * 0.18);
+        float grain = valueNoise(v_worldPosition.xz * 2.5 + u_time * 0.05);
+
+        vec3 varied = color;
+        varied *= mix(vec3(0.9, 1.0, 0.9), vec3(1.05, 0.95, 0.92), macroNoise);
+        varied *= mix(0.97, 1.03, grain * grain);
+
+        color = mix(color, varied, groundMask);
+    }
 
     // Calculate cloud shadow
     float cloudShade = cloudShadow(v_worldPosition.xz, u_time);
