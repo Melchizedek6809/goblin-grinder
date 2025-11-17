@@ -163,14 +163,10 @@ export class AnimationController {
 		);
 
 		// Sample next animation if blending
-		let nextTransforms: Map<
-			number,
-			{ t?: vec3; r?: quat; s?: vec3 }
-		> | null = null;
+		let nextTransforms: Map<number, { t?: vec3; r?: quat; s?: vec3 }> | null =
+			null;
 		if (this.nextState) {
-			nextTransforms = this.nextState.animation.sample(
-				this.nextState.time,
-			);
+			nextTransforms = this.nextState.animation.sample(this.nextState.time);
 		}
 
 		// Apply transforms to skeleton
@@ -184,10 +180,7 @@ export class AnimationController {
 			const scale = scratchScale;
 
 			// Extract current TRS from joint's local transform
-			mat4.getTranslation(
-				translation,
-				this.skeleton.joints[i].localTransform,
-			);
+			mat4.getTranslation(translation, this.skeleton.joints[i].localTransform);
 			mat4.getRotation(rotation, this.skeleton.joints[i].localTransform);
 			mat4.getScaling(scale, this.skeleton.joints[i].localTransform);
 
@@ -238,12 +231,7 @@ export class AnimationController {
 
 			// Build matrix from blended TRS
 			const matrix = scratchMatrix;
-			mat4.fromRotationTranslationScale(
-				matrix,
-				rotation,
-				translation,
-				scale,
-			);
+			mat4.fromRotationTranslationScale(matrix, rotation, translation, scale);
 
 			// Update skeleton joint
 			this.skeleton.setJointLocalTransform(i, matrix);

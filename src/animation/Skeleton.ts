@@ -35,10 +35,7 @@ export class Skeleton {
 			for (let j = 0; j < skin.joints.length; j++) {
 				const parentNodeIndex = skin.joints[j];
 				const parentNode = nodes[parentNodeIndex];
-				if (
-					parentNode.children &&
-					parentNode.children.includes(nodeIndex)
-				) {
+				if (parentNode.children && parentNode.children.includes(nodeIndex)) {
 					parentIndex = j;
 					break;
 				}

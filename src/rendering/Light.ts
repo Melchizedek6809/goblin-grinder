@@ -151,9 +151,10 @@ export class Light {
 			if (!entity.mesh) continue;
 
 			const isSkinned = entity.mesh instanceof SkinnedMesh;
-			const shader = isSkinned && this.depthSkinnedShader
-				? this.depthSkinnedShader
-				: this.depthShader;
+			const shader =
+				isSkinned && this.depthSkinnedShader
+					? this.depthSkinnedShader
+					: this.depthShader;
 
 			shader.use();
 			shader.setUniformMatrix4fv("u_lightSpaceMatrix", this.lightSpaceMatrix);

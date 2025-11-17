@@ -353,7 +353,10 @@ export class Game {
 		}
 
 		// Create player from atlas
-		this.player = new Player(atlas.mage, atlas.mageAnimationController || undefined);
+		this.player = new Player(
+			atlas.mage,
+			atlas.mageAnimationController || undefined,
+		);
 		this.entityManager.addEntities(this.player.entities);
 
 		// Add collider to player (layer 0 = player, collide with everything except player layer)

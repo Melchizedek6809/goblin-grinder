@@ -316,8 +316,7 @@ export class TopBar extends LitElement {
 
 			// Clear animation after animation duration
 			setTimeout(() => {
-				this.animatingScoreDigits.clear();
-				this.requestUpdate();
+				this.animatingScoreDigits = new Set();
 			}, 150);
 		}
 
@@ -332,8 +331,7 @@ export class TopBar extends LitElement {
 
 			// Clear animation after animation duration
 			setTimeout(() => {
-				this.animatingCoinDigits.clear();
-				this.requestUpdate();
+				this.animatingCoinDigits = new Set();
 			}, 150);
 		}
 
@@ -345,7 +343,6 @@ export class TopBar extends LitElement {
 			// Clear animation after animation duration
 			setTimeout(() => {
 				this.animatingHearts = false;
-				this.requestUpdate();
 			}, 150);
 		} else if (changedProperties.has("health")) {
 			// Update previous health even if it decreased

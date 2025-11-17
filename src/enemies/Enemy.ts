@@ -112,12 +112,7 @@ export class Enemy {
 	}
 
 	private updateEntities(): void {
-		quat.fromEuler(
-			this.rotationQuat,
-			0,
-			(this.rotation * 180) / Math.PI,
-			0,
-		);
+		quat.fromEuler(this.rotationQuat, 0, (this.rotation * 180) / Math.PI, 0);
 
 		for (const entity of this.entities) {
 			entity.setPosition(this.position[0], this.position[1], this.position[2]);
@@ -197,7 +192,10 @@ export class Enemy {
 			this.attackTimer = Math.max(0, this.attackTimer - deltaTime);
 		}
 		if (this.attackCooldownTimer > 0) {
-			this.attackCooldownTimer = Math.max(0, this.attackCooldownTimer - deltaTime);
+			this.attackCooldownTimer = Math.max(
+				0,
+				this.attackCooldownTimer - deltaTime,
+			);
 		}
 
 		// State machine transitions
@@ -223,7 +221,10 @@ export class Enemy {
 
 			case "chase":
 				// Transition: chase -> attack (player gets very close)
-				if (distanceToPlayer < this.attackRange && this.attackCooldownTimer <= 0) {
+				if (
+					distanceToPlayer < this.attackRange &&
+					this.attackCooldownTimer <= 0
+				) {
 					this.state = "attack";
 					this.attackTimer = this.attackWindupSeconds;
 					vec3.set(this.goalVelocity, 0, 0, 0); // Stop moving
@@ -297,33 +298,29 @@ export class Enemy {
 		if (this.state !== this.previousState) {
 			switch (this.state) {
 				case "spawn":
-					this.animationController.play(
-						this.spawnAnimationName,
-						false,
-						false,
-					);
+					this.animationController.play(this.spawnAnimationName, false, false);
 					break;
-					case "idle":
-						this.animationController.play("Idle_A", true, blend);
-						break;
-					case "chase":
-						// Enemies move at a walking pace
-						this.animationController.play("Walking_A", true, blend);
-						break;
-					case "attack":
-						// Use Throw as the closest punch/attack animation available
-						this.animationController.play("Throw", false, blend);
-						break;
-					case "jump":
-						this.animationController.play("Jump_Idle", false, blend);
-						break;
-					case "dying":
-						if (this.animationController.hasAnimation("Death_A")) {
-							this.animationController.play("Death_A", false, blend);
-						} else {
-							this.animationController.play("Death_B", false, blend);
-						}
-						break;
+				case "idle":
+					this.animationController.play("Idle_A", true, blend);
+					break;
+				case "chase":
+					// Enemies move at a walking pace
+					this.animationController.play("Walking_A", true, blend);
+					break;
+				case "attack":
+					// Use Throw as the closest punch/attack animation available
+					this.animationController.play("Throw", false, blend);
+					break;
+				case "jump":
+					this.animationController.play("Jump_Idle", false, blend);
+					break;
+				case "dying":
+					if (this.animationController.hasAnimation("Death_A")) {
+						this.animationController.play("Death_A", false, blend);
+					} else {
+						this.animationController.play("Death_B", false, blend);
+					}
+					break;
 				case "dead":
 					if (this.animationController.hasAnimation("Death_A_Pose")) {
 						this.animationController.play("Death_A_Pose", true, false);
@@ -378,10 +375,8 @@ export class Enemy {
 		if (this.state === "spawn") {
 			if (this.animationController) {
 				this.animationController.update(deltaTime);
-				const duration =
-					this.animationController.getCurrentAnimationDuration();
-				const time =
-					this.animationController.getCurrentAnimationTime() ?? 0;
+				const duration = this.animationController.getCurrentAnimationDuration();
+				const time = this.animationController.getCurrentAnimationTime() ?? 0;
 				if (duration != null && time >= duration) {
 					this.state = "idle";
 					this.updateAnimations(false);
@@ -405,21 +400,21 @@ export class Enemy {
 			this.position[1] += this.jumpVelocity * deltaTime;
 
 			// Apply gravity to jump velocity
-				this.jumpVelocity -= this.gravity * deltaTime;
+			this.jumpVelocity -= this.gravity * deltaTime;
 
-				// Check if we've landed (back on or below ground level)
-				if (this.position[1] <= this.groundY) {
-					this.position[1] = this.groundY;
-					this.jumpVelocity = 0;
-					this.isJumping = false;
-					// Transition to chase state after landing
-					this.state = "chase";
-					this.updateAnimations();
-				}
+			// Check if we've landed (back on or below ground level)
+			if (this.position[1] <= this.groundY) {
+				this.position[1] = this.groundY;
+				this.jumpVelocity = 0;
+				this.isJumping = false;
+				// Transition to chase state after landing
+				this.state = "chase";
+				this.updateAnimations();
+			}
 
-				// Update entity transforms and return (no horizontal movement while jumping)
-				this.updateEntities();
-				return;
+			// Update entity transforms and return (no horizontal movement while jumping)
+			this.updateEntities();
+			return;
 		}
 
 		// Interpolate current velocity towards goal velocity

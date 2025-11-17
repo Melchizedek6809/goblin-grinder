@@ -181,12 +181,7 @@ export class Player {
 	}
 
 	private updateEntities(): void {
-		quat.fromEuler(
-			this.rotationQuat,
-			0,
-			(this.rotation * 180) / Math.PI,
-			0,
-		);
+		quat.fromEuler(this.rotationQuat, 0, (this.rotation * 180) / Math.PI, 0);
 
 		for (const entity of this.entities) {
 			entity.setPosition(this.position[0], this.position[1], this.position[2]);

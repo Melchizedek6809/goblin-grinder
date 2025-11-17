@@ -113,8 +113,7 @@ export class AnimationLoader {
 			const accessor = gltf.accessors[accessorIndex];
 			const bufferView = gltf.bufferViews[accessor.bufferView ?? 0];
 
-			const offset =
-				(bufferView.byteOffset ?? 0) + (accessor.byteOffset ?? 0);
+			const offset = (bufferView.byteOffset ?? 0) + (accessor.byteOffset ?? 0);
 			const componentCount = this.getComponentCount(accessor.type);
 			const elementSize = this.getComponentSize(accessor.componentType);
 			const elementCount = accessor.count * componentCount;

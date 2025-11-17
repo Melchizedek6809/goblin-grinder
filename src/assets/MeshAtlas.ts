@@ -379,9 +379,7 @@ export class MeshAtlas {
 	/**
 	 * Create a new enemy instance (separate skeleton + controller) while sharing GPU buffers/texture.
 	 */
-	createSkeletonEnemyInstance(
-		gl: WebGL2RenderingContext,
-	): {
+	createSkeletonEnemyInstance(gl: WebGL2RenderingContext): {
 		meshes: SkinnedMesh[];
 		animationController: AnimationController;
 	} {

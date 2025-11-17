@@ -17,6 +17,8 @@ export class LevelUpModal extends LitElement {
 	@property({ type: Array })
 	private cardStates: boolean[] = [true, true, true, true]; // All start face-down
 
+	private flipTimeouts: number[] = [];
+
 	static styles = css`
 		:host {
 			position: fixed;
@@ -119,28 +121,44 @@ export class LevelUpModal extends LitElement {
 
 	updated(changedProperties: Map<string, unknown>) {
 		if (changedProperties.has("visible") && this.visible) {
-			// Reset all cards to face-down
-			this.cardStates = [true, true, true, true];
-			this.requestUpdate();
-
-			// Stagger the card flips
-			setTimeout(() => {
-				this.cardStates[0] = false;
-				this.requestUpdate();
-			}, 100);
-			setTimeout(() => {
-				this.cardStates[1] = false;
-				this.requestUpdate();
-			}, 250);
-			setTimeout(() => {
-				this.cardStates[2] = false;
-				this.requestUpdate();
-			}, 400);
-			// Mystery card stays face-down
+			this.startFlipSequence();
 		} else if (changedProperties.has("visible") && !this.visible) {
 			// Reset card states when modal closes
 			this.cardStates = [true, true, true, true];
+			this.clearFlipTimeouts();
 		}
+	}
+
+	disconnectedCallback(): void {
+		super.disconnectedCallback();
+		this.clearFlipTimeouts();
+	}
+
+	private async startFlipSequence() {
+		this.clearFlipTimeouts();
+
+		// Ensure the initial face-down state has rendered before flipping
+		await this.updateComplete;
+
+		this.flipTimeouts.push(
+			window.setTimeout(() => this.setCardFaceUp(0), 100),
+			window.setTimeout(() => this.setCardFaceUp(1), 250),
+			window.setTimeout(() => this.setCardFaceUp(2), 400),
+		);
+		// Mystery card stays face-down until selection
+	}
+
+	private clearFlipTimeouts() {
+		for (const timeoutId of this.flipTimeouts) {
+			clearTimeout(timeoutId);
+		}
+		this.flipTimeouts = [];
+	}
+
+	private setCardFaceUp(index: number) {
+		this.cardStates = this.cardStates.map((state, i) =>
+			i === index ? false : state,
+		);
 	}
 
 	private handleCardSelected(event: CustomEvent) {
@@ -151,8 +169,7 @@ export class LevelUpModal extends LitElement {
 
 		if (isMysteryCard) {
 			// Flip the mystery card first
-			this.cardStates[3] = false;
-			this.requestUpdate();
+			this.setCardFaceUp(3);
 
 			// Wait for flip animation (600ms) + reveal time (2000ms), then dispatch event
 			setTimeout(() => {

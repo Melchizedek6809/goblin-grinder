@@ -148,11 +148,7 @@ export class Fireball extends Projectile {
 					(Math.random() - 0.5) * 0.15,
 				);
 				vec3.add(this.smokePosScratch, this.position, this.smokeOffsetScratch);
-				vec3.add(
-					this.smokePosScratch,
-					this.smokePosScratch,
-					this.wiggleOffset,
-				);
+				vec3.add(this.smokePosScratch, this.smokePosScratch, this.wiggleOffset);
 
 				// Slow upward velocity with slight random drift
 				vec3.set(

@@ -83,17 +83,11 @@ export class Animation {
 	 * Returns an array of [translation, rotation, scale] tuples for each joint
 	 */
 	sample(time: number): Map<number, { t?: vec3; r?: quat; s?: vec3 }> {
-		const transforms = new Map<
-			number,
-			{ t?: vec3; r?: quat; s?: vec3 }
-		>();
+		const transforms = new Map<number, { t?: vec3; r?: quat; s?: vec3 }>();
 
 		for (const channel of this.channels) {
 			// Find keyframe indices for this time
-			const { index0, index1, t } = this.findKeyframes(
-				channel.times,
-				time,
-			);
+			const { index0, index1, t } = this.findKeyframes(channel.times, time);
 
 			// Get joint transform (create if doesn't exist)
 			if (!transforms.has(channel.jointIndex)) {
@@ -103,26 +97,11 @@ export class Animation {
 
 			// Interpolate based on path type
 			if (channel.path === "translation") {
-				transform.t = this.interpolateVec3(
-					channel.values,
-					index0,
-					index1,
-					t,
-				);
+				transform.t = this.interpolateVec3(channel.values, index0, index1, t);
 			} else if (channel.path === "rotation") {
-				transform.r = this.interpolateQuat(
-					channel.values,
-					index0,
-					index1,
-					t,
-				);
+				transform.r = this.interpolateQuat(channel.values, index0, index1, t);
 			} else if (channel.path === "scale") {
-				transform.s = this.interpolateVec3(
-					channel.values,
-					index0,
-					index1,
-					t,
-				);
+				transform.s = this.interpolateVec3(channel.values, index0, index1, t);
 			}
 		}
 
