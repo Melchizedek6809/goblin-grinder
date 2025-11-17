@@ -1,5 +1,9 @@
 import { vec3 } from "gl-matrix";
 
+const diff = vec3.create();
+const accel = vec3.create();
+const move = vec3.create();
+
 /**
  * Apply spring physics to move current toward target with smooth overshoot
  * @param current - Current position/value to update
@@ -18,11 +22,9 @@ export function applySpring(
 	deltaTime: number,
 ): void {
 	// Calculate difference between target and current position
-	const diff = vec3.create();
 	vec3.subtract(diff, target, current);
 
 	// Apply spring force (acceleration = stiffness * distance)
-	const accel = vec3.create();
 	vec3.scale(accel, diff, stiffness * deltaTime);
 	vec3.add(velocity, velocity, accel);
 
@@ -30,7 +32,6 @@ export function applySpring(
 	vec3.scale(velocity, velocity, damping);
 
 	// Update position based on velocity
-	const move = vec3.create();
 	vec3.scale(move, velocity, deltaTime);
 	vec3.add(current, current, move);
 }

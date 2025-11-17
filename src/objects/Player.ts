@@ -41,6 +41,12 @@ export class Player {
 	private moveAnimationName: string | null = null;
 	private animationState: "idle" | "walk" = "idle";
 	private appliedAnimationState: "idle" | "walk" = "idle";
+	private targetVelocity = vec3.create();
+	private tmpOldPos = vec3.create();
+	private tmpNewPos = vec3.create();
+	private tmpMoveDir = vec3.create();
+	private tmpActualMove = vec3.create();
+	private rotationQuat = quat.create();
 
 	// Weapons
 	public weapons: Weapon[] = [];
@@ -78,13 +84,13 @@ export class Player {
 
 		// Calculate target velocity based on input
 		const maxSpeed = this.moveSpeed * this.speedMultiplier;
-		const targetVelocity = vec3.fromValues(x * maxSpeed, 0, z * maxSpeed);
+		vec3.set(this.targetVelocity, x * maxSpeed, 0, z * maxSpeed);
 
 		// Apply acceleration towards target velocity
 		if (x !== 0 || z !== 0) {
 			// Accelerating - move towards target velocity
-			const velDiffX = targetVelocity[0] - this.velocity[0];
-			const velDiffZ = targetVelocity[2] - this.velocity[2];
+			const velDiffX = this.targetVelocity[0] - this.velocity[0];
+			const velDiffZ = this.targetVelocity[2] - this.velocity[2];
 
 			// Apply acceleration
 			this.velocity[0] += velDiffX * this.acceleration * deltaTime;
@@ -121,18 +127,17 @@ export class Player {
 		}
 
 		// Calculate new position based on velocity
-		const oldPos = vec3.clone(this.position);
-		const newPos = vec3.create();
-		newPos[0] = this.position[0] + this.velocity[0] * deltaTime;
-		newPos[1] = this.position[1];
-		newPos[2] = this.position[2] + this.velocity[2] * deltaTime;
+		vec3.copy(this.tmpOldPos, this.position);
+		this.tmpNewPos[0] = this.position[0] + this.velocity[0] * deltaTime;
+		this.tmpNewPos[1] = this.position[1];
+		this.tmpNewPos[2] = this.position[2] + this.velocity[2] * deltaTime;
 
 		// Apply physics collision if available
 		if (physics && this.entities[0]?.collider?.type === "sphere") {
 			const collider = this.entities[0].collider as SphereCollider;
 			const safePos = physics.sweepSphere(
-				oldPos,
-				newPos,
+				this.tmpOldPos,
+				this.tmpNewPos,
 				collider.radius,
 				0, // player layer
 				0xffffffff, // collide with all layers
@@ -140,21 +145,25 @@ export class Player {
 			);
 
 			// Check if we collided (position was adjusted)
-			const didCollide = !vec3.equals(safePos, newPos);
+			const didCollide = !vec3.equals(safePos, this.tmpNewPos);
 			if (didCollide) {
 				// If we hit something, zero out velocity in that direction
 				// This prevents "sliding" along walls
-				const moveDir = vec3.create();
-				vec3.subtract(moveDir, newPos, oldPos);
-				const actualMove = vec3.create();
-				vec3.subtract(actualMove, safePos, oldPos);
+				vec3.subtract(this.tmpMoveDir, this.tmpNewPos, this.tmpOldPos);
+				vec3.subtract(this.tmpActualMove, safePos, this.tmpOldPos);
 
 				// If we couldn't move in X, zero X velocity
-				if (Math.abs(moveDir[0]) > 0.001 && Math.abs(actualMove[0]) < 0.001) {
+				if (
+					Math.abs(this.tmpMoveDir[0]) > 0.001 &&
+					Math.abs(this.tmpActualMove[0]) < 0.001
+				) {
 					this.velocity[0] = 0;
 				}
 				// If we couldn't move in Z, zero Z velocity
-				if (Math.abs(moveDir[2]) > 0.001 && Math.abs(actualMove[2]) < 0.001) {
+				if (
+					Math.abs(this.tmpMoveDir[2]) > 0.001 &&
+					Math.abs(this.tmpActualMove[2]) < 0.001
+				) {
 					this.velocity[2] = 0;
 				}
 			}
@@ -162,7 +171,7 @@ export class Player {
 			vec3.copy(this.position, safePos);
 		} else {
 			// No physics - just move directly
-			vec3.copy(this.position, newPos);
+			vec3.copy(this.position, this.tmpNewPos);
 		}
 
 		this.enforceGroundBounds();
@@ -172,12 +181,16 @@ export class Player {
 	}
 
 	private updateEntities(): void {
-		const rotation = quat.create();
-		quat.fromEuler(rotation, 0, (this.rotation * 180) / Math.PI, 0);
+		quat.fromEuler(
+			this.rotationQuat,
+			0,
+			(this.rotation * 180) / Math.PI,
+			0,
+		);
 
 		for (const entity of this.entities) {
 			entity.setPosition(this.position[0], this.position[1], this.position[2]);
-			entity.rotation = rotation;
+			entity.rotation = this.rotationQuat;
 
 			// Update collider position if it exists
 			if (entity.collider) {
@@ -339,11 +352,6 @@ export class Player {
 
 		if (this.idleAnimationName) {
 			this.animationController.play(this.idleAnimationName, true, false);
-			console.log(
-				"[Player] Using animations",
-				{ idle: this.idleAnimationName, move: this.moveAnimationName },
-				names,
-			);
 		}
 	}
 
@@ -363,9 +371,6 @@ export class Player {
 	 */
 	takeDamage(amount: number): void {
 		this.health = Math.max(0, this.health - amount);
-		console.log(
-			`Player took ${amount} damage. Health: ${this.health}/${this.maxHealth}`,
-		);
 	}
 
 	addExperience(amount: number): void {
@@ -374,14 +379,10 @@ export class Player {
 		}
 
 		this.experience += amount;
-		console.log(
-			`Gained ${amount} XP. Total XP: ${this.experience}/${this.xpToNextLevel}`,
-		);
 
 		if (this.experience >= this.xpToNextLevel) {
 			this.experience = this.xpToNextLevel;
 			this.levelUpReady = true;
-			console.log("Level up ready!");
 		}
 	}
 
@@ -404,55 +405,35 @@ export class Player {
 		this.levelUpReady = false;
 		this.experience = 0;
 		this.xpToNextLevel *= 2;
-		console.log(`Level up! Next level at ${this.xpToNextLevel} XP.`);
 	}
 
 	increaseMaxHealth(amount: number): void {
 		this.maxHealth += amount;
 		this.health = this.maxHealth;
-		console.log(`Max HP increased to ${this.maxHealth}`);
 	}
 
 	increaseSpeedMultiplier(amount: number): void {
 		this.speedMultiplier += amount;
-		console.log(
-			`Speed multiplier increased to ${this.speedMultiplier.toFixed(2)}x`,
-		);
 	}
 
 	increaseAttackSpeedMultiplier(amount: number): void {
 		this.attackSpeedMultiplier += amount;
-		console.log(
-			`Attack speed multiplier increased to ${this.attackSpeedMultiplier.toFixed(2)}x`,
-		);
 	}
 
 	increaseDamageMultiplier(amount: number): void {
 		this.damageMultiplier += amount;
-		console.log(
-			`Damage multiplier increased to ${this.damageMultiplier.toFixed(2)}x`,
-		);
 	}
 
 	increaseHealthRegenRate(amount: number): void {
 		this.healthRegenRate += amount;
-		console.log(
-			`Health regen rate increased to ${this.healthRegenRate.toFixed(2)} HP/s`,
-		);
 	}
 
 	increaseKnockbackPower(amount: number): void {
 		this.knockbackPower += amount;
-		console.log(
-			`Knockback power increased to ${this.knockbackPower.toFixed(2)}x`,
-		);
 	}
 
 	increaseCoinMagnetRange(amount: number): void {
 		this.coinMagnetRange += amount;
-		console.log(
-			`Coin magnet range increased to ${this.coinMagnetRange.toFixed(2)}x`,
-		);
 	}
 
 	getModifiedAttackCooldown(baseCooldown: number): number {

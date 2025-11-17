@@ -13,6 +13,9 @@ export class FireballWeapon extends Weapon {
 	private maxRange = 8.0; // Maximum firing range
 	private baseDirectDamage = 25;
 	private baseExplosionDamage = 15;
+	private scratchDirection = vec3.create();
+	private scratchVelocity = vec3.create();
+	private scratchSpawnPos = vec3.create();
 
 	update(
 		player: Player,
@@ -40,23 +43,21 @@ export class FireballWeapon extends Weapon {
 		const enemyPos = closestEnemy.getPosition();
 
 		// Calculate direction
-		const direction = vec3.create();
-		vec3.subtract(direction, enemyPos, playerPos);
-		vec3.normalize(direction, direction);
+		vec3.subtract(this.scratchDirection, enemyPos, playerPos);
+		vec3.normalize(this.scratchDirection, this.scratchDirection);
 
 		// Set velocity (5.5 units/sec)
 		const speed = 5.5;
-		const velocity = vec3.create();
-		vec3.scale(velocity, direction, speed);
+		vec3.scale(this.scratchVelocity, this.scratchDirection, speed);
 
 		// Spawn position slightly above player
-		const spawnPos = vec3.clone(playerPos);
-		spawnPos[1] += 0.5;
+		vec3.copy(this.scratchSpawnPos, playerPos);
+		this.scratchSpawnPos[1] += 0.5;
 
 		// Create fireball with proper dependencies
 		const fireball = new Fireball(
-			spawnPos,
-			velocity,
+			this.scratchSpawnPos,
+			this.scratchVelocity,
 			particleSystem,
 			spawnExplosion,
 			player.getModifiedDamage(this.baseDirectDamage),

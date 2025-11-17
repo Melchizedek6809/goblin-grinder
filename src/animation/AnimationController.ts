@@ -2,6 +2,11 @@ import { mat4, quat, vec3 } from "gl-matrix";
 import { Animation } from "./Animation.ts";
 import { Skeleton } from "./Skeleton.ts";
 
+const scratchTranslation = vec3.create();
+const scratchRotation = quat.create();
+const scratchScale = vec3.fromValues(1, 1, 1);
+const scratchMatrix = mat4.create();
+
 interface AnimationState {
 	animation: Animation;
 	time: number;
@@ -74,12 +79,6 @@ export class AnimationController {
 			this.nextState = null;
 			this.blendTimer = 0;
 		}
-
-		console.log("[AnimationController] Animation change", {
-			from: fromName,
-			to: animation.name,
-			blend,
-		});
 	}
 
 	/**
@@ -180,9 +179,9 @@ export class AnimationController {
 			const nextTransform = nextTransforms?.get(i);
 
 			// Get default TRS from joint
-			let translation = vec3.create();
-			let rotation = quat.create();
-			let scale = vec3.fromValues(1, 1, 1);
+			const translation = scratchTranslation;
+			const rotation = scratchRotation;
+			const scale = scratchScale;
 
 			// Extract current TRS from joint's local transform
 			mat4.getTranslation(
@@ -238,7 +237,7 @@ export class AnimationController {
 			}
 
 			// Build matrix from blended TRS
-			const matrix = mat4.create();
+			const matrix = scratchMatrix;
 			mat4.fromRotationTranslationScale(
 				matrix,
 				rotation,

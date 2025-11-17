@@ -1,8 +1,8 @@
 #version 300 es
 
-in vec3 a_position;
-in vec4 a_joints;
-in vec4 a_weights;
+layout(location = 0) in vec3 a_position;
+layout(location = 4) in vec4 a_joints;
+layout(location = 5) in vec4 a_weights;
 
 uniform mat4 u_model;
 uniform mat4 u_lightSpaceMatrix;

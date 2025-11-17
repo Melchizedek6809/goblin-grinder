@@ -11,6 +11,9 @@ export class MouseInput implements InputSource {
 	private mouseY: number = 0;
 	private isMouseDown: boolean = false;
 	private rotationDelta: number = 0;
+	private readonly wheelListenerOptions: AddEventListenerOptions = {
+		passive: true,
+	};
 
 	// Mouse wheel sensitivity (radians per deltaY unit)
 	// Typical wheel notch gives ~100 deltaY, so 0.0008 * 100 = 0.08 radians ≈ 4.6 degrees
@@ -20,7 +23,7 @@ export class MouseInput implements InputSource {
 		window.addEventListener("mousedown", this.onMouseDown);
 		window.addEventListener("mousemove", this.onMouseMove);
 		window.addEventListener("mouseup", this.onMouseUp);
-		window.addEventListener("wheel", this.onWheel);
+		window.addEventListener("wheel", this.onWheel, this.wheelListenerOptions);
 	}
 
 	private onMouseDown = (e: MouseEvent) => {
@@ -43,8 +46,6 @@ export class MouseInput implements InputSource {
 	};
 
 	private onWheel = (e: WheelEvent) => {
-		e.preventDefault();
-
 		// Accumulate rotation delta from wheel
 		// Positive deltaY = scroll down = rotate right
 		// Negative deltaY = scroll up = rotate left
@@ -113,6 +114,10 @@ export class MouseInput implements InputSource {
 		window.removeEventListener("mousedown", this.onMouseDown);
 		window.removeEventListener("mousemove", this.onMouseMove);
 		window.removeEventListener("mouseup", this.onMouseUp);
-		window.removeEventListener("wheel", this.onWheel);
+		window.removeEventListener(
+			"wheel",
+			this.onWheel,
+			this.wheelListenerOptions,
+		);
 	}
 }

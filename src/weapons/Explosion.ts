@@ -2,6 +2,12 @@ import { vec3 } from "gl-matrix";
 import type { Enemy } from "../enemies/Enemy.ts";
 import type { ParticleSystem } from "../vfx/ParticleSystem.ts";
 
+const EXPLOSION_COLORS = [
+	vec3.fromValues(1.0, 0.3, 0.1), // Red-orange
+	vec3.fromValues(1.0, 0.5, 0.1), // Orange
+	vec3.fromValues(1.0, 0.8, 0.2), // Yellow-orange
+];
+
 export class Explosion {
 	position: vec3;
 	radius: number;
@@ -9,6 +15,7 @@ export class Explosion {
 	knockbackForce: number;
 	hasDealtDamage = false;
 	private ignoredEnemies: Set<Enemy>;
+	private knockbackDir = vec3.create();
 
 	constructor(
 		position: vec3,
@@ -42,13 +49,12 @@ export class Explosion {
 				enemy.takeDamage(this.damage);
 
 				// Calculate knockback direction (from explosion to enemy)
-				const knockbackDir = vec3.create();
-				vec3.subtract(knockbackDir, enemyPos, this.position);
+				vec3.subtract(this.knockbackDir, enemyPos, this.position);
 
 				// Handle edge case where enemy is exactly at explosion center
-				const dirLength = vec3.length(knockbackDir);
+				const dirLength = vec3.length(this.knockbackDir);
 				if (dirLength > 0.01) {
-					vec3.normalize(knockbackDir, knockbackDir);
+					vec3.normalize(this.knockbackDir, this.knockbackDir);
 
 					// Knockback strength decreases with distance (inverse lerp)
 					// At center (dist=0): full force, at edge (dist=radius): 50% force
@@ -57,7 +63,7 @@ export class Explosion {
 
 					// Apply knockback
 					enemy.applyKnockback(
-						knockbackDir,
+						this.knockbackDir,
 						this.knockbackForce * knockbackMultiplier,
 					);
 				}
@@ -69,19 +75,13 @@ export class Explosion {
 
 	spawnParticles(particleSystem: ParticleSystem): void {
 		// Spawn a radial burst of particles
-		const colors = [
-			vec3.fromValues(1.0, 0.3, 0.1), // Red-orange
-			vec3.fromValues(1.0, 0.5, 0.1), // Orange
-			vec3.fromValues(1.0, 0.8, 0.2), // Yellow-orange
-		];
-
 		particleSystem.spawnBurst(
 			this.position,
 			512, // particle count
 			[2.0, 4.0], // speed range
 			[20.0, 40.0], // size range
 			[0.2, 0.4], // lifetime range
-			colors,
+			EXPLOSION_COLORS,
 			-12.0, // gravity
 			"additive", // additive blending for explosions
 		);

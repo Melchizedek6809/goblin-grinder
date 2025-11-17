@@ -1,6 +1,11 @@
 import { quat, vec3 } from "gl-matrix";
 import type { AnimationClip, Node } from "../assets/GLBLoader.ts";
 
+const scratchVec3A = vec3.create();
+const scratchVec3B = vec3.create();
+const scratchQuatA = quat.create();
+const scratchQuatB = quat.create();
+
 interface Channel {
 	jointIndex: number;
 	path: "translation" | "rotation" | "scale";
@@ -172,24 +177,29 @@ export class Animation {
 		index1: number,
 		t: number,
 	): vec3 {
-		const v0 = vec3.fromValues(
+		const v0 = scratchVec3A;
+		vec3.set(
+			v0,
 			values[index0 * 3 + 0],
 			values[index0 * 3 + 1],
 			values[index0 * 3 + 2],
 		);
 
-		if (index0 === index1 || t === 0) {
-			return v0;
+		const result = vec3.create();
+		vec3.copy(result, v0);
+
+		if (index0 !== index1 && t !== 0) {
+			const v1 = scratchVec3B;
+			vec3.set(
+				v1,
+				values[index1 * 3 + 0],
+				values[index1 * 3 + 1],
+				values[index1 * 3 + 2],
+			);
+
+			vec3.lerp(result, v0, v1, t);
 		}
 
-		const v1 = vec3.fromValues(
-			values[index1 * 3 + 0],
-			values[index1 * 3 + 1],
-			values[index1 * 3 + 2],
-		);
-
-		const result = vec3.create();
-		vec3.lerp(result, v0, v1, t);
 		return result;
 	}
 
@@ -202,26 +212,31 @@ export class Animation {
 		index1: number,
 		t: number,
 	): quat {
-		const q0 = quat.fromValues(
+		const q0 = scratchQuatA;
+		quat.set(
+			q0,
 			values[index0 * 4 + 0],
 			values[index0 * 4 + 1],
 			values[index0 * 4 + 2],
 			values[index0 * 4 + 3],
 		);
 
-		if (index0 === index1 || t === 0) {
-			return q0;
+		const result = quat.create();
+		quat.copy(result, q0);
+
+		if (index0 !== index1 && t !== 0) {
+			const q1 = scratchQuatB;
+			quat.set(
+				q1,
+				values[index1 * 4 + 0],
+				values[index1 * 4 + 1],
+				values[index1 * 4 + 2],
+				values[index1 * 4 + 3],
+			);
+
+			quat.slerp(result, q0, q1, t);
 		}
 
-		const q1 = quat.fromValues(
-			values[index1 * 4 + 0],
-			values[index1 * 4 + 1],
-			values[index1 * 4 + 2],
-			values[index1 * 4 + 3],
-		);
-
-		const result = quat.create();
-		quat.slerp(result, q0, q1, t);
 		return result;
 	}
 }

@@ -172,9 +172,6 @@ export class HealthPotion extends Pickup {
 				game.player.health + this.healAmount,
 			);
 			const actualHeal = game.player.health - oldHealth;
-			console.log(
-				`Healed for ${actualHeal} HP! Health: ${game.player.health}/${game.player.maxHealth}`,
-			);
 		}
 
 		// Spawn collection burst particles

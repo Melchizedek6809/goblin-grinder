@@ -8,6 +8,7 @@ import type { Physics } from "../physics/Physics.ts";
 import type { Player } from "../objects/Player.ts";
 
 export type EnemyState =
+	| "spawn"
 	| "idle"
 	| "chase"
 	| "attack"
@@ -59,6 +60,13 @@ export class Enemy {
 	private attackTimer: number = 0; // Counts down attack windup
 	private attackCooldownTimer: number = 0; // Prevents immediate re-attacks
 	private collidersRemoved: boolean = false;
+	private readonly spawnAnimationName = "Spawn_Ground";
+	private toPlayerScratch = vec3.create();
+	private tmpOldPos = vec3.create();
+	private tmpNewPos = vec3.create();
+	private tmpMoveDir = vec3.create();
+	private tmpActualMove = vec3.create();
+	private rotationQuat = quat.create();
 
 	constructor({
 		meshes,
@@ -72,6 +80,13 @@ export class Enemy {
 		this.goalVelocity = vec3.create();
 		this.animationController = animationController || null;
 
+		const initialState =
+			this.animationController?.hasAnimation(this.spawnAnimationName) === true
+				? "spawn"
+				: "idle";
+		this.state = initialState;
+		this.previousState = "dead"; // force animation update on init
+
 		this.entities = meshes.map((mesh) => {
 			const entity = new Entity(mesh);
 			entity.setPosition(0, 0, 0);
@@ -81,7 +96,8 @@ export class Enemy {
 
 		// Start with idle animation
 		if (this.animationController) {
-			this.animationController.play("Idle_A", true, false);
+			this.updateAnimations();
+			this.animationController.update(0);
 		}
 	}
 
@@ -96,12 +112,16 @@ export class Enemy {
 	}
 
 	private updateEntities(): void {
-		const rotation = quat.create();
-		quat.fromEuler(rotation, 0, (this.rotation * 180) / Math.PI, 0);
+		quat.fromEuler(
+			this.rotationQuat,
+			0,
+			(this.rotation * 180) / Math.PI,
+			0,
+		);
 
 		for (const entity of this.entities) {
 			entity.setPosition(this.position[0], this.position[1], this.position[2]);
-			entity.rotation = rotation;
+			entity.rotation = this.rotationQuat;
 
 			// Update collider position if it exists
 			if (entity.collider) {
@@ -118,9 +138,6 @@ export class Enemy {
 		if (this.state === "dead" || this.state === "dying") return; // Already dead/dying
 
 		this.health -= amount;
-		console.log(
-			`Enemy took ${amount} damage, health: ${this.health}/${this.maxHealth}`,
-		);
 
 		if (this.health <= 0) {
 			this.health = 0;
@@ -130,7 +147,6 @@ export class Enemy {
 			vec3.set(this.velocity, 0, 0, 0);
 			this.updateAnimations();
 			this.previousState = this.state;
-			console.log("Enemy died!");
 		}
 	}
 
@@ -163,12 +179,18 @@ export class Enemy {
 	update(player: Player, deltaTime: number): void {
 		// Skip AI logic if dead or dying
 		if (this.state === "dead" || this.state === "dying") return;
+		// Skip AI while spawning
+		if (this.state === "spawn") {
+			vec3.set(this.goalVelocity, 0, 0, 0);
+			this.updateAnimations();
+			this.previousState = this.state;
+			return;
+		}
 		const playerPosition = player.getPosition();
 
 		// Calculate distance and direction to player
-		const toPlayer = vec3.create();
-		vec3.subtract(toPlayer, playerPosition, this.position);
-		const distanceToPlayer = vec3.length(toPlayer);
+		vec3.subtract(this.toPlayerScratch, playerPosition, this.position);
+		const distanceToPlayer = vec3.length(this.toPlayerScratch);
 
 		// Tick down attack timers
 		if (this.attackTimer > 0) {
@@ -217,13 +239,16 @@ export class Enemy {
 
 				// Chase: move towards player
 				if (distanceToPlayer > 0.1) {
-					vec3.normalize(toPlayer, toPlayer);
-					this.goalVelocity[0] = toPlayer[0] * this.moveSpeed;
+					vec3.normalize(this.toPlayerScratch, this.toPlayerScratch);
+					this.goalVelocity[0] = this.toPlayerScratch[0] * this.moveSpeed;
 					this.goalVelocity[1] = 0;
-					this.goalVelocity[2] = toPlayer[2] * this.moveSpeed;
+					this.goalVelocity[2] = this.toPlayerScratch[2] * this.moveSpeed;
 
 					// Update rotation to face player
-					this.rotation = Math.atan2(toPlayer[0], toPlayer[2]);
+					this.rotation = Math.atan2(
+						this.toPlayerScratch[0],
+						this.toPlayerScratch[2],
+					);
 				}
 				break;
 
@@ -233,8 +258,11 @@ export class Enemy {
 
 				// Always face the player during attack
 				if (distanceToPlayer > 0.1) {
-					vec3.normalize(toPlayer, toPlayer);
-					this.rotation = Math.atan2(toPlayer[0], toPlayer[2]);
+					vec3.normalize(this.toPlayerScratch, this.toPlayerScratch);
+					this.rotation = Math.atan2(
+						this.toPlayerScratch[0],
+						this.toPlayerScratch[2],
+					);
 				}
 
 				// Transition: attack -> chase (attack duration finished)
@@ -262,33 +290,40 @@ export class Enemy {
 	/**
 	 * Update animations based on current state
 	 */
-	private updateAnimations(): void {
+	private updateAnimations(blend: boolean = true): void {
 		if (!this.animationController) return;
 
 		// Only change animation if state changed
 		if (this.state !== this.previousState) {
 			switch (this.state) {
-				case "idle":
-					this.animationController.play("Idle_A", true, true);
+				case "spawn":
+					this.animationController.play(
+						this.spawnAnimationName,
+						false,
+						false,
+					);
 					break;
-				case "chase":
-					// Enemies move at a walking pace
-					this.animationController.play("Walking_A", true, true);
-					break;
-				case "attack":
-					// Use Throw as the closest punch/attack animation available
-					this.animationController.play("Throw", false, true);
-					break;
-				case "jump":
-					this.animationController.play("Jump_Idle", false, true);
-					break;
-				case "dying":
-					if (this.animationController.hasAnimation("Death_A")) {
-						this.animationController.play("Death_A", false, true);
-					} else {
-						this.animationController.play("Death_B", false, true);
-					}
-					break;
+					case "idle":
+						this.animationController.play("Idle_A", true, blend);
+						break;
+					case "chase":
+						// Enemies move at a walking pace
+						this.animationController.play("Walking_A", true, blend);
+						break;
+					case "attack":
+						// Use Throw as the closest punch/attack animation available
+						this.animationController.play("Throw", false, blend);
+						break;
+					case "jump":
+						this.animationController.play("Jump_Idle", false, blend);
+						break;
+					case "dying":
+						if (this.animationController.hasAnimation("Death_A")) {
+							this.animationController.play("Death_A", false, blend);
+						} else {
+							this.animationController.play("Death_B", false, blend);
+						}
+						break;
 				case "dead":
 					if (this.animationController.hasAnimation("Death_A_Pose")) {
 						this.animationController.play("Death_A_Pose", true, false);
@@ -339,6 +374,31 @@ export class Enemy {
 			return;
 		}
 
+		// Handle spawn intro animation before enabling AI
+		if (this.state === "spawn") {
+			if (this.animationController) {
+				this.animationController.update(deltaTime);
+				const duration =
+					this.animationController.getCurrentAnimationDuration();
+				const time =
+					this.animationController.getCurrentAnimationTime() ?? 0;
+				if (duration != null && time >= duration) {
+					this.state = "idle";
+					this.updateAnimations(false);
+				}
+			}
+
+			// Update entity transforms and skip movement while spawning
+			this.updateEntities();
+
+			// If we transitioned to idle this frame, let normal movement proceed
+			if (this.state !== "spawn") {
+				// fall through
+			} else {
+				return;
+			}
+		}
+
 		// Handle jump physics
 		if (this.isJumping) {
 			// Apply jump velocity to vertical position
@@ -380,18 +440,17 @@ export class Enemy {
 		}
 
 		// Calculate new position based on velocity
-		const oldPos = vec3.clone(this.position);
-		const newPos = vec3.create();
-		newPos[0] = this.position[0] + this.velocity[0] * deltaTime;
-		newPos[1] = this.position[1];
-		newPos[2] = this.position[2] + this.velocity[2] * deltaTime;
+		vec3.copy(this.tmpOldPos, this.position);
+		this.tmpNewPos[0] = this.position[0] + this.velocity[0] * deltaTime;
+		this.tmpNewPos[1] = this.position[1];
+		this.tmpNewPos[2] = this.position[2] + this.velocity[2] * deltaTime;
 
 		// Apply physics collision if available
 		if (physics && this.entities[0]?.collider?.type === "sphere") {
 			const collider = this.entities[0].collider as SphereCollider;
 			const safePos = physics.sweepSphere(
-				oldPos,
-				newPos,
+				this.tmpOldPos,
+				this.tmpNewPos,
 				collider.radius,
 				1, // enemy layer
 				0xffffffff, // collide with all layers (including other enemies)
@@ -399,20 +458,24 @@ export class Enemy {
 			);
 
 			// Check if we collided (position was adjusted)
-			const didCollide = !vec3.equals(safePos, newPos);
+			const didCollide = !vec3.equals(safePos, this.tmpNewPos);
 			if (didCollide) {
 				// If we hit something, zero out velocity in that direction
-				const moveDir = vec3.create();
-				vec3.subtract(moveDir, newPos, oldPos);
-				const actualMove = vec3.create();
-				vec3.subtract(actualMove, safePos, oldPos);
+				vec3.subtract(this.tmpMoveDir, this.tmpNewPos, this.tmpOldPos);
+				vec3.subtract(this.tmpActualMove, safePos, this.tmpOldPos);
 
 				// If we couldn't move in X, zero X velocity
-				if (Math.abs(moveDir[0]) > 0.001 && Math.abs(actualMove[0]) < 0.001) {
+				if (
+					Math.abs(this.tmpMoveDir[0]) > 0.001 &&
+					Math.abs(this.tmpActualMove[0]) < 0.001
+				) {
 					this.velocity[0] = 0;
 				}
 				// If we couldn't move in Z, zero Z velocity
-				if (Math.abs(moveDir[2]) > 0.001 && Math.abs(actualMove[2]) < 0.001) {
+				if (
+					Math.abs(this.tmpMoveDir[2]) > 0.001 &&
+					Math.abs(this.tmpActualMove[2]) < 0.001
+				) {
 					this.velocity[2] = 0;
 				}
 			}
