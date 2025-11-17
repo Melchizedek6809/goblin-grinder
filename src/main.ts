@@ -35,6 +35,8 @@ import depthFragmentShaderSource from "./shaders/depth.frag?raw";
 import depthVertexShaderSource from "./shaders/depth.vert?raw";
 import particleFragmentShaderSource from "./shaders/particle.frag?raw";
 import particleVertexShaderSource from "./shaders/particle.vert?raw";
+import skinnedFragmentShaderSource from "./shaders/skinned.frag?raw";
+import skinnedVertexShaderSource from "./shaders/skinned.vert?raw";
 import {
 	SCENERY_BORDER_PADDING,
 	WORLD_SIZE,
@@ -61,6 +63,7 @@ export class Game {
 
 	// Rendering
 	private shader: Shader | null = null;
+	private skinnedShader: Shader | null = null;
 	private depthShader: Shader | null = null;
 	private particleShader: Shader | null = null;
 	private renderer: Renderer | null = null;
@@ -91,6 +94,7 @@ export class Game {
 	// Game state
 	private gameState: GameState = GameState.MENU;
 	private paused: boolean = false;
+	private isLoading: boolean = false;
 
 	// Cache for loaded assets (to avoid reloading on restart)
 	private cachedAtlas: MeshAtlas | null = null;
@@ -256,7 +260,7 @@ export class Game {
 		this.light = null;
 		this.enemies = [];
 		this.physics = new Physics();
-		this.spawnManager = new SpawnManager(this.physics);
+		this.spawnManager = new SpawnManager(this.physics, gl);
 
 		// Reset camera and shader state (only if not already initialized)
 		if (!this.shader) {
@@ -270,6 +274,11 @@ export class Game {
 
 			// Create shaders
 			this.shader = new Shader(gl, vertexShaderSource, fragmentShaderSource);
+			this.skinnedShader = new Shader(
+				gl,
+				skinnedVertexShaderSource,
+				skinnedFragmentShaderSource,
+			);
 			this.depthShader = new Shader(
 				gl,
 				depthVertexShaderSource,
@@ -282,7 +291,7 @@ export class Game {
 			);
 
 			// Create renderer
-			this.renderer = new Renderer(gl, this.shader);
+			this.renderer = new Renderer(gl, this.shader, this.skinnedShader);
 
 			// Create debug renderer
 			this.debugRenderer = new DebugRenderer(gl);
@@ -336,7 +345,7 @@ export class Game {
 		}
 
 		// Create player from atlas
-		this.player = new Player(atlas.mage);
+		this.player = new Player(atlas.mage, atlas.mageAnimationController || undefined);
 		this.entityManager.addEntities(this.player.entities);
 
 		// Add collider to player (layer 0 = player, collide with everything except player layer)
@@ -420,6 +429,14 @@ export class Game {
 	 * Start a new game
 	 */
 	private async startGame() {
+		// Prevent multiple simultaneous initialization
+		if (this.isLoading) {
+			return;
+		}
+
+		this.isLoading = true;
+		this.uiManager.setMainMenuLoading(true);
+
 		try {
 			// If assets are still loading, wait for them
 			if (this.assetsLoadingPromise) {
@@ -438,6 +455,9 @@ export class Game {
 			alert(
 				`Failed to start game: ${error instanceof Error ? error.message : String(error)}`,
 			);
+			this.uiManager.setMainMenuLoading(false);
+		} finally {
+			this.isLoading = false;
 		}
 	}
 
@@ -459,6 +479,7 @@ export class Game {
 		this.gameState = GameState.MENU;
 		this.setPaused(false);
 		this.uiManager.hideLevelUpModal();
+		this.uiManager.setMainMenuLoading(false);
 		this.uiManager.updateVisibility(this.gameState);
 	}
 
@@ -607,8 +628,6 @@ export class Game {
 
 		// Update player logic (only during gameplay)
 		if (this.gameState === GameState.PLAYING) {
-			this.player.update(this.fixedTimestep, this.particleSystem);
-
 			// Update weapons
 			for (const weapon of this.player.weapons) {
 				weapon.update(
@@ -680,6 +699,11 @@ export class Game {
 	private applyMovement(deltaTime: number) {
 		if (this.paused) {
 			return;
+		}
+
+		// Update player animation/particles every frame using the most recent velocity
+		if (this.gameState === GameState.PLAYING && this.player) {
+			this.player.update(deltaTime, this.particleSystem ?? undefined);
 		}
 
 		// Apply enemy movement with physics (continues during game over)

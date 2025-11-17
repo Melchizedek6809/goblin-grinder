@@ -1,11 +1,19 @@
 import { quat, vec3 } from "gl-matrix";
 import type { Mesh } from "../assets/Mesh.ts";
+import type { SkinnedMesh } from "../animation/SkinnedMesh.ts";
+import type { AnimationController } from "../animation/AnimationController.ts";
 import { Entity } from "../objects/Entity.ts";
 import type { SphereCollider } from "../physics/Collider.ts";
 import type { Physics } from "../physics/Physics.ts";
 import type { Player } from "../objects/Player.ts";
 
-export type EnemyState = "idle" | "chase" | "attack" | "death";
+export type EnemyState =
+	| "idle"
+	| "chase"
+	| "attack"
+	| "jump"
+	| "dying"
+	| "dead";
 
 export class Enemy {
 	public entities: Entity[];
@@ -15,8 +23,10 @@ export class Enemy {
 	public rotation: number = 0; // Y-axis rotation in radians
 
 	// AI state machine
-	public state: EnemyState = "idle";
+	private state: EnemyState = "idle";
+	private previousState: EnemyState = "idle"; // Track state changes for animation
 	private attackTimer: number = 0; // Counts fixed update ticks during attack
+	private animationController: AnimationController | null = null;
 
 	// Jump mechanics
 	private isJumping: boolean = false;
@@ -30,7 +40,7 @@ export class Enemy {
 	public health: number = 50;
 	public maxHealth: number = 50;
 	private deathTimer: number = 0; // Time spent in death state (seconds)
-	private deathDuration: number = 2.0; // How long to stay in death state before despawn
+	private deathDuration: number = 1.0; // Sink/despawn duration after death pose
 	private sinkSpeed: number = 0.5; // How fast to sink into ground (units/second)
 	public rewardGranted: boolean = false; // Track if points/coins have been awarded for this enemy
 
@@ -47,16 +57,29 @@ export class Enemy {
 	// Combat
 	public attackDamage: number = 10; // Damage dealt to player per attack
 
-	constructor(meshes: Mesh[]) {
+	constructor({
+		meshes,
+		animationController,
+	}: {
+		meshes: Mesh[] | SkinnedMesh[];
+		animationController?: AnimationController;
+	}) {
 		this.position = vec3.fromValues(0, -0.5, 0);
 		this.velocity = vec3.create();
 		this.goalVelocity = vec3.create();
+		this.animationController = animationController || null;
+
 		this.entities = meshes.map((mesh) => {
 			const entity = new Entity(mesh);
 			entity.setPosition(0, 0, 0);
 			entity.setUniformScale(0.5);
 			return entity;
 		});
+
+		// Start with idle animation
+		if (this.animationController) {
+			this.animationController.play("Idle_A", true, false);
+		}
 	}
 
 	setPosition(x: number, y: number, z: number): void {
@@ -89,7 +112,7 @@ export class Enemy {
 	 * @param amount Amount of damage to deal
 	 */
 	takeDamage(amount: number): void {
-		if (this.state === "death") return; // Already dead
+		if (this.state === "dead" || this.state === "dying") return; // Already dead/dying
 
 		this.health -= amount;
 		console.log(
@@ -98,10 +121,12 @@ export class Enemy {
 
 		if (this.health <= 0) {
 			this.health = 0;
-			this.state = "death";
+			this.state = "dying";
 			this.deathTimer = 0;
 			vec3.set(this.goalVelocity, 0, 0, 0);
 			vec3.set(this.velocity, 0, 0, 0);
+			this.updateAnimations();
+			this.previousState = this.state;
 			console.log("Enemy died!");
 		}
 	}
@@ -113,7 +138,7 @@ export class Enemy {
 	 */
 	applyKnockback(direction: vec3, force: number): void {
 		// Don't apply knockback to dead enemies
-		if (this.state === "death") return;
+		if (this.state === "dead" || this.state === "dying") return;
 
 		// Apply knockback by directly modifying velocity (instantaneous push)
 		// Only apply horizontal knockback (X and Z), not vertical
@@ -125,7 +150,7 @@ export class Enemy {
 	 * Check if enemy should be removed from the game
 	 */
 	shouldDespawn(): boolean {
-		return this.state === "death" && this.deathTimer >= this.deathDuration;
+		return this.state === "dead" && this.deathTimer >= this.deathDuration;
 	}
 
 	/**
@@ -133,8 +158,8 @@ export class Enemy {
 	 * State machine that controls enemy behavior based on player
 	 */
 	update(player: Player): void {
-		// Skip AI logic if dead
-		if (this.state === "death") return;
+		// Skip AI logic if dead or dying
+		if (this.state === "dead" || this.state === "dying") return;
 		const playerPosition = player.getPosition();
 
 		// Calculate distance and direction to player
@@ -152,6 +177,7 @@ export class Enemy {
 						this.isJumping = true;
 						this.jumpVelocity = this.jumpSpeed;
 						vec3.set(this.goalVelocity, 0, 0, 0); // Don't move horizontally while jumping
+						this.state = "jump";
 					} else {
 						this.state = "chase";
 					}
@@ -212,6 +238,58 @@ export class Enemy {
 					this.state = "chase";
 				}
 				break;
+
+			case "jump":
+				// No horizontal movement while airborne; handled in applyMovement
+				vec3.set(this.goalVelocity, 0, 0, 0);
+				break;
+		}
+
+		// Update animations based on state changes
+		this.updateAnimations();
+		this.previousState = this.state;
+	}
+
+	/**
+	 * Update animations based on current state
+	 */
+	private updateAnimations(): void {
+		if (!this.animationController) return;
+
+		// Only change animation if state changed
+		if (this.state !== this.previousState) {
+			switch (this.state) {
+				case "idle":
+					this.animationController.play("Idle_A", true, true);
+					break;
+				case "chase":
+					// Enemies move at a walking pace
+					this.animationController.play("Walking_A", true, true);
+					break;
+				case "attack":
+					// Use Throw as the closest punch/attack animation available
+					this.animationController.play("Throw", false, true);
+					break;
+				case "jump":
+					this.animationController.play("Jump_Idle", false, true);
+					break;
+				case "dying":
+					if (this.animationController.hasAnimation("Death_A")) {
+						this.animationController.play("Death_A", false, true);
+					} else {
+						this.animationController.play("Death_B", false, true);
+					}
+					break;
+				case "dead":
+					if (this.animationController.hasAnimation("Death_A_Pose")) {
+						this.animationController.play("Death_A_Pose", true, false);
+					}
+					break;
+			}
+
+			// Force an immediate sample so we don't show the bind pose between states
+			this.animationController.update(0);
+			this.previousState = this.state;
 		}
 	}
 
@@ -220,12 +298,30 @@ export class Enemy {
 	 * This creates smooth movement between fixed updates
 	 */
 	applyMovement(deltaTime: number, physics?: Physics): void {
-		// Handle death state
-		if (this.state === "death") {
-			this.deathTimer += deltaTime;
+		// Handle death states
+		if (this.state === "dying" || this.state === "dead") {
+			if (this.animationController) {
+				this.animationController.update(deltaTime);
+			}
 
-			// Sink into the ground
-			this.position[1] -= this.sinkSpeed * deltaTime;
+			if (this.state === "dying") {
+				const duration =
+					this.animationController?.getCurrentAnimationDuration();
+				const time = this.animationController?.getCurrentAnimationTime() ?? 0;
+				if (duration != null && time >= duration) {
+					this.state = "dead";
+					this.deathTimer = 0;
+					this.updateAnimations(); // switch to death pose loop
+				}
+			} else {
+				// dead state: loop pose and sink
+				this.deathTimer += deltaTime;
+				if (this.deathTimer <= this.deathDuration) {
+					this.position[1] -= this.sinkSpeed * deltaTime;
+				} else {
+					this.deathTimer = this.deathDuration;
+				}
+			}
 
 			// Update entity transforms
 			this.updateEntities();
@@ -238,20 +334,21 @@ export class Enemy {
 			this.position[1] += this.jumpVelocity * deltaTime;
 
 			// Apply gravity to jump velocity
-			this.jumpVelocity -= this.gravity * deltaTime;
+				this.jumpVelocity -= this.gravity * deltaTime;
 
-			// Check if we've landed (back on or below ground level)
-			if (this.position[1] <= this.groundY) {
-				this.position[1] = this.groundY;
-				this.jumpVelocity = 0;
-				this.isJumping = false;
-				// Transition to chase state after landing
-				this.state = "chase";
-			}
+				// Check if we've landed (back on or below ground level)
+				if (this.position[1] <= this.groundY) {
+					this.position[1] = this.groundY;
+					this.jumpVelocity = 0;
+					this.isJumping = false;
+					// Transition to chase state after landing
+					this.state = "chase";
+					this.updateAnimations();
+				}
 
-			// Update entity transforms and return (no horizontal movement while jumping)
-			this.updateEntities();
-			return;
+				// Update entity transforms and return (no horizontal movement while jumping)
+				this.updateEntities();
+				return;
 		}
 
 		// Interpolate current velocity towards goal velocity
@@ -315,8 +412,22 @@ export class Enemy {
 			vec3.copy(this.position, newPos);
 		}
 
+		// Update animations
+		if (this.animationController) {
+			this.animationController.update(deltaTime);
+		}
+
 		// Update entity transforms
 		this.updateEntities();
+
+		// If we've somehow lost the next state mid-blend, ensure current is playing
+		// to avoid getting stuck in bind pose (failsafe).
+		if (
+			this.animationController &&
+			!this.animationController.getCurrentAnimationName()
+		) {
+			this.animationController.play("Idle_A", true, false);
+		}
 	}
 
 	getPosition(): vec3 {
@@ -325,5 +436,9 @@ export class Enemy {
 
 	getState(): EnemyState {
 		return this.state;
+	}
+
+	isDead(): boolean {
+		return this.state === "dead" || this.state === "dying";
 	}
 }

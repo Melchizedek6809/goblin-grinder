@@ -45,7 +45,7 @@ export class ProjectileManager {
 
 			// Check collision with enemies - XZ plane only
 			for (const enemy of enemies) {
-				if (enemy.getState() === "death") continue; // Skip dead enemies
+				if (enemy.isDead()) continue; // Skip dead enemies
 
 				// Calculate XZ distance only
 				const dx = projectile.position[0] - enemy.getPosition()[0];

@@ -1,5 +1,7 @@
 import { quat, vec3 } from "gl-matrix";
 import type { Mesh } from "../assets/Mesh.ts";
+import type { SkinnedMesh } from "../animation/SkinnedMesh.ts";
+import type { AnimationController } from "../animation/AnimationController.ts";
 import { Entity } from "./Entity.ts";
 import type { SphereCollider } from "../physics/Collider.ts";
 import type { Physics } from "../physics/Physics.ts";
@@ -16,6 +18,7 @@ export class Player {
 	public position: vec3;
 	public velocity: vec3;
 	public rotation: number = 0; // Y-axis rotation in radians
+	private animationController: AnimationController | null = null;
 
 	// Movement parameters
 	public moveSpeed: number = 3.0; // Base movement speed
@@ -34,6 +37,10 @@ export class Player {
 	public experience: number = 0;
 	private xpToNextLevel: number = 4;
 	private levelUpReady: boolean = false;
+	private idleAnimationName: string | null = null;
+	private moveAnimationName: string | null = null;
+	private animationState: "idle" | "walk" = "idle";
+	private appliedAnimationState: "idle" | "walk" = "idle";
 
 	// Weapons
 	public weapons: Weapon[] = [];
@@ -42,18 +49,33 @@ export class Player {
 	private particleTimer: number = 0;
 	private particleSpawnRate: number = 0.08; // Spawn particles every 0.08 seconds
 
-	constructor(meshes: Mesh[]) {
+	constructor(
+		meshes: Mesh[] | SkinnedMesh[],
+		animationController?: AnimationController,
+	) {
 		this.position = vec3.fromValues(0, -0.5, 0);
 		this.velocity = vec3.create();
+		this.animationController = animationController || null;
+
 		this.entities = meshes.map((mesh) => {
 			const entity = new Entity(mesh);
 			entity.setPosition(0, 0, 0);
 			entity.setUniformScale(0.5);
 			return entity;
 		});
+
+		this.resolveAnimationNames();
+		// Apply the starting pose immediately so we don't show the bind pose on spawn
+		if (this.animationController && this.idleAnimationName) {
+			this.animationController.play(this.idleAnimationName, true, false);
+			this.animationController.update(0);
+		}
 	}
 
 	move(x: number, z: number, deltaTime: number, physics?: Physics): void {
+		// Drive animation state directly from input intent
+		this.animationState = x !== 0 || z !== 0 ? "walk" : "idle";
+
 		// Calculate target velocity based on input
 		const maxSpeed = this.moveSpeed * this.speedMultiplier;
 		const targetVelocity = vec3.fromValues(x * maxSpeed, 0, z * maxSpeed);
@@ -187,6 +209,36 @@ export class Player {
 			);
 		}
 
+		// Update animation based on movement
+		if (this.animationController) {
+			if (!this.idleAnimationName || !this.moveAnimationName) {
+				this.resolveAnimationNames();
+			}
+
+			// Determine which clip should play for the current animation state
+			let desiredClip: string | null = null;
+			if (this.animationState === "walk") {
+				desiredClip = this.moveAnimationName ?? this.idleAnimationName;
+			} else {
+				desiredClip = this.idleAnimationName ?? this.moveAnimationName;
+			}
+
+			// Only switch if the state changed or the clip isn't already playing
+			if (desiredClip) {
+				const currentClip = this.animationController.getCurrentAnimationName();
+				if (
+					this.animationState !== this.appliedAnimationState ||
+					currentClip !== desiredClip
+				) {
+					this.animationController.play(desiredClip, true, true);
+					this.appliedAnimationState = this.animationState;
+				}
+			}
+
+			// Update animation controller
+			this.animationController.update(deltaTime);
+		}
+
 		// Spawn walking particles if moving
 		if (particleSystem) {
 			this.spawnWalkingParticles(deltaTime, particleSystem);
@@ -255,6 +307,43 @@ export class Player {
 
 				particleSystem.spawn(particle);
 			}
+		}
+	}
+
+	private resolveAnimationNames(): void {
+		if (!this.animationController) {
+			return;
+		}
+
+		const names = this.animationController.getAnimationNames();
+
+		// Pick idle animation (prefer names containing "idle")
+		const idle =
+			names.find((n) => n === "Idle_A") ??
+			names.find((n) => /idle/i.test(n)) ??
+			names.find((n) => /stand/i.test(n)) ??
+			null;
+
+		// Pick movement animation (prefer walk/run/move)
+		const move =
+			names.find((n) => n === "Running_A") ??
+			names.find((n) => n === "Running_B") ??
+			names.find((n) => n === "Walking_A") ??
+			names.find((n) => /walk/i.test(n)) ??
+			names.find((n) => /run/i.test(n)) ??
+			names.find((n) => /move/i.test(n)) ??
+			null;
+
+		this.idleAnimationName = idle;
+		this.moveAnimationName = move;
+
+		if (this.idleAnimationName) {
+			this.animationController.play(this.idleAnimationName, true, false);
+			console.log(
+				"[Player] Using animations",
+				{ idle: this.idleAnimationName, move: this.moveAnimationName },
+				names,
+			);
 		}
 	}
 

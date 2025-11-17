@@ -61,6 +61,15 @@ export class UIManager {
 	}
 
 	/**
+	 * Set the main menu loading state
+	 */
+	setMainMenuLoading(loading: boolean): void {
+		if (this.mainMenu) {
+			this.mainMenu.loading = loading;
+		}
+	}
+
+	/**
 	 * Update UI visibility based on game state
 	 */
 	updateVisibility(gameState: GameState): void {
@@ -86,15 +95,6 @@ export class UIManager {
 				this.topBar.visible = false;
 				this.hideLevelUpModal();
 				break;
-		}
-	}
-
-	/**
-	 * Set loading state on main menu
-	 */
-	setMainMenuLoading(loading: boolean): void {
-		if (this.mainMenu) {
-			this.mainMenu.loading = loading;
 		}
 	}
 

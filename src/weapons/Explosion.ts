@@ -8,17 +8,20 @@ export class Explosion {
 	damage: number;
 	knockbackForce: number;
 	hasDealtDamage = false;
+	private ignoredEnemies: Set<Enemy>;
 
 	constructor(
 		position: vec3,
 		radius: number,
 		damage: number,
 		knockbackForce = 10.0,
+		ignoredEnemies: Enemy[] = [],
 	) {
 		this.position = vec3.clone(position);
 		this.radius = radius;
 		this.damage = damage;
 		this.knockbackForce = knockbackForce;
+		this.ignoredEnemies = new Set(ignoredEnemies);
 	}
 
 	dealDamage(enemies: Enemy[]): void {
@@ -26,6 +29,11 @@ export class Explosion {
 
 		// Find all enemies within radius and damage them
 		for (const enemy of enemies) {
+			// Skip enemies we already hit directly (avoids double damage)
+			if (this.ignoredEnemies.has(enemy)) {
+				continue;
+			}
+
 			const enemyPos = enemy.getPosition();
 			const dist = vec3.distance(this.position, enemyPos);
 

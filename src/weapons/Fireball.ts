@@ -37,7 +37,7 @@ export class Fireball extends Projectile {
 		enemy.takeDamage(this.directDamage);
 
 		// Create explosion at impact point
-		this.createExplosion();
+		this.createExplosion(enemy);
 
 		// Destroy the fireball
 		return true;
@@ -54,11 +54,13 @@ export class Fireball extends Projectile {
 		return true;
 	}
 
-	private createExplosion(): void {
+	private createExplosion(directHitEnemy?: Enemy): void {
 		const explosion = new Explosion(
 			this.position,
 			this.explosionRadius,
 			this.explosionDamage,
+			undefined,
+			directHitEnemy ? [directHitEnemy] : [],
 		);
 		this.spawnExplosion(explosion);
 	}

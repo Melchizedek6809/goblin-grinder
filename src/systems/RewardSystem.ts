@@ -100,7 +100,7 @@ export class RewardSystem {
 		atlas: MeshAtlas | null,
 	): void {
 		for (const enemy of enemies) {
-			if (enemy.getState() === "death" && !enemy.rewardGranted) {
+			if (enemy.isDead() && !enemy.rewardGranted) {
 				enemy.rewardGranted = true;
 				this.addScore(100); // 100 points per kill
 

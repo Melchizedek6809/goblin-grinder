@@ -1,5 +1,6 @@
 import { mat4, quat, vec3 } from "gl-matrix";
 import type { Mesh } from "../assets/Mesh.ts";
+import type { SkinnedMesh } from "../animation/SkinnedMesh.ts";
 import type { Collider } from "../physics/Collider.ts";
 import type { Renderable } from "../rendering/Renderable.ts";
 
@@ -7,12 +8,12 @@ export class Entity implements Renderable {
 	public position: vec3;
 	public rotation: quat;
 	public scale: vec3;
-	public mesh: Mesh;
+	public mesh: Mesh | SkinnedMesh;
 	public collider?: Collider;
 
 	private modelMatrix: mat4;
 
-	constructor(mesh: Mesh) {
+	constructor(mesh: Mesh | SkinnedMesh) {
 		this.mesh = mesh;
 		this.position = vec3.create();
 		this.rotation = quat.create();

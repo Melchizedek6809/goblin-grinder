@@ -17,14 +17,16 @@ import {
  */
 export class SpawnManager {
 	private physics: Physics;
+	private gl: WebGL2RenderingContext;
 
 	// Enemy spawning configuration
 	private enemySpawnTimer: number = 0;
 	private enemySpawnInterval: number = 3.0; // Spawn every 3 seconds
 	private maxEnemies: number = 10;
 
-	constructor(physics: Physics) {
+	constructor(physics: Physics, gl: WebGL2RenderingContext) {
 		this.physics = physics;
+		this.gl = gl;
 	}
 
 	/**
@@ -39,13 +41,13 @@ export class SpawnManager {
 	): void {
 		if (!atlas || !player) return;
 
-		this.enemySpawnTimer += deltaTime;
+			this.enemySpawnTimer += deltaTime;
 
-		if (
-			this.enemySpawnTimer >= this.enemySpawnInterval &&
-			enemies.length < this.maxEnemies
-		) {
-			this.enemySpawnTimer = 0;
+			if (
+				this.enemySpawnTimer >= this.enemySpawnInterval &&
+				enemies.length < this.maxEnemies
+			) {
+				this.enemySpawnTimer = 0;
 
 			// Determine group size (1-3 enemies)
 			const groupSize = Math.min(
@@ -84,7 +86,8 @@ export class SpawnManager {
 		entities: Renderable[],
 		enemies: Enemy[],
 	): void {
-		const enemy = new Enemy(atlas.skeleton);
+		const enemyInstance = atlas.createSkeletonEnemyInstance(this.gl);
+		const enemy = new Enemy(enemyInstance);
 		enemy.setPosition(x, y, z);
 
 		// Face toward center (0, 0)

@@ -6,7 +6,7 @@ export class MainMenu extends LitElement {
 	@property({ type: Boolean, reflect: true })
 	visible = true;
 
-	@property({ type: Boolean })
+	@property({ type: Boolean, reflect: true })
 	loading = false;
 
 	static styles = css`
@@ -193,8 +193,9 @@ export class MainMenu extends LitElement {
 		}
 
 		.button:disabled {
-			opacity: 0.7;
+			opacity: 0.6;
 			cursor: not-allowed;
+			transform: none;
 		}
 
 		.button:disabled:hover {

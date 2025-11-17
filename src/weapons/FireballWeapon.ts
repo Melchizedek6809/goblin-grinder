@@ -80,7 +80,7 @@ export class FireballWeapon extends Weapon {
 
 		for (const enemy of enemies) {
 			// Skip dead enemies
-			if (enemy.getState() === "death") continue;
+			if (enemy.isDead()) continue;
 
 			const enemyPos = enemy.getPosition();
 			const distance = vec3.distance(playerPos, enemyPos);

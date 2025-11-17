@@ -2,6 +2,7 @@ import type { Camera } from "./Camera.ts";
 import type { Light } from "./Light.ts";
 import type { Renderable } from "./Renderable.ts";
 import type { Shader } from "./Shader.ts";
+import { SkinnedMesh } from "../animation/SkinnedMesh.ts";
 
 /**
  * Handles the rendering pipeline
@@ -10,9 +11,15 @@ import type { Shader } from "./Shader.ts";
 export class Renderer {
 	private gl: WebGL2RenderingContext;
 	private shader: Shader;
-	constructor(gl: WebGL2RenderingContext, shader: Shader) {
+	private skinnedShader: Shader;
+	constructor(
+		gl: WebGL2RenderingContext,
+		shader: Shader,
+		skinnedShader: Shader,
+	) {
 		this.gl = gl;
 		this.shader = shader;
+		this.skinnedShader = skinnedShader;
 	}
 
 	/**
@@ -54,48 +61,85 @@ export class Renderer {
 		// Reset viewport to canvas size
 		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
-		// Use shader and set uniforms
-		this.shader.use();
+		// Separate entities by shader type for efficient batching
+		const regularEntities: Renderable[] = [];
+		const skinnedEntities: Renderable[] = [];
+
+		for (const entity of entities) {
+			if (!entity.mesh) continue;
+			if (!this.isEntityVisible(entity, camera)) continue;
+
+			if (entity.mesh instanceof SkinnedMesh) {
+				skinnedEntities.push(entity);
+			} else {
+				regularEntities.push(entity);
+			}
+		}
+
+		// Render regular entities with basic shader
+		if (regularEntities.length > 0) {
+			this.shader.use();
+			this.setCommonUniforms(this.shader, camera, light, time, noiseTexture);
+
+			for (const entity of regularEntities) {
+				this.renderEntity(entity, this.shader);
+			}
+		}
+
+		// Render skinned entities with skinned shader
+		if (skinnedEntities.length > 0) {
+			this.skinnedShader.use();
+			this.setCommonUniforms(
+				this.skinnedShader,
+				camera,
+				light,
+				time,
+				noiseTexture,
+			);
+
+			for (const entity of skinnedEntities) {
+				this.renderEntity(entity, this.skinnedShader);
+			}
+		}
+	}
+
+	/**
+	 * Set common uniforms shared by both shaders
+	 */
+	private setCommonUniforms(
+		shader: Shader,
+		camera: Camera,
+		light: Light | null,
+		time: number,
+		noiseTexture: WebGLTexture | null,
+	): void {
+		const gl = this.gl;
 
 		// Set camera uniforms
-		this.shader.setUniformMatrix4fv("u_view", camera.getViewMatrix());
-		this.shader.setUniformMatrix4fv(
-			"u_projection",
-			camera.getProjectionMatrix(),
-		);
-		this.shader.setUniform1f("u_time", time);
+		shader.setUniformMatrix4fv("u_view", camera.getViewMatrix());
+		shader.setUniformMatrix4fv("u_projection", camera.getProjectionMatrix());
+		shader.setUniform1f("u_time", time);
 
 		// Bind noise texture for cloud shadows (use texture slot 5)
 		if (noiseTexture) {
 			gl.activeTexture(gl.TEXTURE5);
 			gl.bindTexture(gl.TEXTURE_2D, noiseTexture);
-			this.shader.setUniform1i("u_noiseTexture", 5);
+			shader.setUniform1i("u_noiseTexture", 5);
 		}
 
 		// Set light uniforms
 		if (light) {
-			this.shader.setUniformMatrix4fv(
+			shader.setUniformMatrix4fv(
 				"u_lightSpaceMatrix",
 				light.getLightSpaceMatrix(),
 			);
-			this.shader.setUniform3fv("u_lightPosition", light.position);
-			this.shader.setUniform3fv("u_lightColor", light.color);
+			shader.setUniform3fv("u_lightPosition", light.position);
+			shader.setUniform3fv("u_lightColor", light.color);
 
 			// Bind shadow map texture
 			gl.activeTexture(gl.TEXTURE0);
 			gl.bindTexture(gl.TEXTURE_2D, light.shadowTexture);
-			this.shader.setUniform1i("u_shadowMap", 0);
-		}
-
-		// Draw each entity
-		for (const entity of entities) {
-			// Skip entities without a mesh
-			if (!entity.mesh) continue;
-
-			// Frustum culling
-			if (!this.isEntityVisible(entity, camera)) continue;
-
-			this.renderEntity(entity);
+			shader.setUniform1i("u_shadowMap", 0);
 		}
 	}
 
@@ -118,20 +162,29 @@ export class Renderer {
 	/**
 	 * Render a single entity
 	 */
-	private renderEntity(entity: Renderable): void {
+	private renderEntity(entity: Renderable, shader: Shader): void {
 		const gl = this.gl;
 
 		const modelMatrix = entity.getModelMatrix();
-		this.shader.setUniformMatrix4fv("u_model", modelMatrix);
+		shader.setUniformMatrix4fv("u_model", modelMatrix);
+
+		// Handle skinned mesh
+		if (entity.mesh instanceof SkinnedMesh) {
+			// Upload joint matrices
+			shader.setUniformMatrix4fvArray(
+				"u_jointMatrices",
+				entity.mesh.skeleton.jointMatrices,
+			);
+		}
 
 		// Bind texture if available
 		if (entity.mesh.texture) {
 			gl.activeTexture(gl.TEXTURE4); // Use slot 4 (0-3 are for shadow maps)
 			gl.bindTexture(gl.TEXTURE_2D, entity.mesh.texture);
-			this.shader.setUniform1i("u_texture", 4);
-			this.shader.setUniform1i("u_useTexture", 1);
+			shader.setUniform1i("u_texture", 4);
+			shader.setUniform1i("u_useTexture", 1);
 		} else {
-			this.shader.setUniform1i("u_useTexture", 0);
+			shader.setUniform1i("u_useTexture", 0);
 		}
 
 		entity.mesh.bind();
