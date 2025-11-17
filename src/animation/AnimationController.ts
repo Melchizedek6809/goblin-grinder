@@ -1,6 +1,6 @@
 import { mat4, quat, vec3 } from "gl-matrix";
-import { Animation } from "./Animation.ts";
-import { Skeleton } from "./Skeleton.ts";
+import type { Animation } from "./Animation.ts";
+import type { Skeleton } from "./Skeleton.ts";
 
 const scratchTranslation = vec3.create();
 const scratchRotation = quat.create();
@@ -58,8 +58,6 @@ export class AnimationController {
 		) {
 			return;
 		}
-
-		const fromName = this.currentState?.animation.name ?? null;
 
 		const newState: AnimationState = {
 			animation,

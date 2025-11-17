@@ -16,6 +16,13 @@ export type EnemyState =
 	| "dying"
 	| "dead";
 
+const toPlayerScratch = vec3.create();
+const tmpOldPos = vec3.create();
+const tmpNewPos = vec3.create();
+const tmpMoveDir = vec3.create();
+const tmpActualMove = vec3.create();
+const rotationQuat = quat.create();
+
 export class Enemy {
 	public entities: Entity[];
 	public position: vec3;
@@ -61,12 +68,6 @@ export class Enemy {
 	private attackCooldownTimer: number = 0; // Prevents immediate re-attacks
 	private collidersRemoved: boolean = false;
 	private readonly spawnAnimationName = "Spawn_Ground";
-	private toPlayerScratch = vec3.create();
-	private tmpOldPos = vec3.create();
-	private tmpNewPos = vec3.create();
-	private tmpMoveDir = vec3.create();
-	private tmpActualMove = vec3.create();
-	private rotationQuat = quat.create();
 
 	constructor({
 		meshes,
@@ -112,11 +113,11 @@ export class Enemy {
 	}
 
 	private updateEntities(): void {
-		quat.fromEuler(this.rotationQuat, 0, (this.rotation * 180) / Math.PI, 0);
+		quat.fromEuler(rotationQuat, 0, (this.rotation * 180) / Math.PI, 0);
 
 		for (const entity of this.entities) {
 			entity.setPosition(this.position[0], this.position[1], this.position[2]);
-			entity.rotation = this.rotationQuat;
+			entity.rotation = rotationQuat;
 
 			// Update collider position if it exists
 			if (entity.collider) {
@@ -184,8 +185,8 @@ export class Enemy {
 		const playerPosition = player.getPosition();
 
 		// Calculate distance and direction to player
-		vec3.subtract(this.toPlayerScratch, playerPosition, this.position);
-		const distanceToPlayer = vec3.length(this.toPlayerScratch);
+		vec3.subtract(toPlayerScratch, playerPosition, this.position);
+		const distanceToPlayer = vec3.length(toPlayerScratch);
 
 		// Tick down attack timers
 		if (this.attackTimer > 0) {
@@ -240,16 +241,13 @@ export class Enemy {
 
 				// Chase: move towards player
 				if (distanceToPlayer > 0.1) {
-					vec3.normalize(this.toPlayerScratch, this.toPlayerScratch);
-					this.goalVelocity[0] = this.toPlayerScratch[0] * this.moveSpeed;
+					vec3.normalize(toPlayerScratch, toPlayerScratch);
+					this.goalVelocity[0] = toPlayerScratch[0] * this.moveSpeed;
 					this.goalVelocity[1] = 0;
-					this.goalVelocity[2] = this.toPlayerScratch[2] * this.moveSpeed;
+					this.goalVelocity[2] = toPlayerScratch[2] * this.moveSpeed;
 
 					// Update rotation to face player
-					this.rotation = Math.atan2(
-						this.toPlayerScratch[0],
-						this.toPlayerScratch[2],
-					);
+					this.rotation = Math.atan2(toPlayerScratch[0], toPlayerScratch[2]);
 				}
 				break;
 
@@ -259,11 +257,8 @@ export class Enemy {
 
 				// Always face the player during attack
 				if (distanceToPlayer > 0.1) {
-					vec3.normalize(this.toPlayerScratch, this.toPlayerScratch);
-					this.rotation = Math.atan2(
-						this.toPlayerScratch[0],
-						this.toPlayerScratch[2],
-					);
+					vec3.normalize(toPlayerScratch, toPlayerScratch);
+					this.rotation = Math.atan2(toPlayerScratch[0], toPlayerScratch[2]);
 				}
 
 				// Transition: attack -> chase (attack duration finished)
@@ -435,17 +430,17 @@ export class Enemy {
 		}
 
 		// Calculate new position based on velocity
-		vec3.copy(this.tmpOldPos, this.position);
-		this.tmpNewPos[0] = this.position[0] + this.velocity[0] * deltaTime;
-		this.tmpNewPos[1] = this.position[1];
-		this.tmpNewPos[2] = this.position[2] + this.velocity[2] * deltaTime;
+		vec3.copy(tmpOldPos, this.position);
+		tmpNewPos[0] = this.position[0] + this.velocity[0] * deltaTime;
+		tmpNewPos[1] = this.position[1];
+		tmpNewPos[2] = this.position[2] + this.velocity[2] * deltaTime;
 
 		// Apply physics collision if available
 		if (physics && this.entities[0]?.collider?.type === "sphere") {
 			const collider = this.entities[0].collider as SphereCollider;
 			const safePos = physics.sweepSphere(
-				this.tmpOldPos,
-				this.tmpNewPos,
+				tmpOldPos,
+				tmpNewPos,
 				collider.radius,
 				1, // enemy layer
 				0xffffffff, // collide with all layers (including other enemies)
@@ -453,23 +448,23 @@ export class Enemy {
 			);
 
 			// Check if we collided (position was adjusted)
-			const didCollide = !vec3.equals(safePos, this.tmpNewPos);
+			const didCollide = !vec3.equals(safePos, tmpNewPos);
 			if (didCollide) {
 				// If we hit something, zero out velocity in that direction
-				vec3.subtract(this.tmpMoveDir, this.tmpNewPos, this.tmpOldPos);
-				vec3.subtract(this.tmpActualMove, safePos, this.tmpOldPos);
+				vec3.subtract(tmpMoveDir, tmpNewPos, tmpOldPos);
+				vec3.subtract(tmpActualMove, safePos, tmpOldPos);
 
 				// If we couldn't move in X, zero X velocity
 				if (
-					Math.abs(this.tmpMoveDir[0]) > 0.001 &&
-					Math.abs(this.tmpActualMove[0]) < 0.001
+					Math.abs(tmpMoveDir[0]) > 0.001 &&
+					Math.abs(tmpActualMove[0]) < 0.001
 				) {
 					this.velocity[0] = 0;
 				}
 				// If we couldn't move in Z, zero Z velocity
 				if (
-					Math.abs(this.tmpMoveDir[2]) > 0.001 &&
-					Math.abs(this.tmpActualMove[2]) < 0.001
+					Math.abs(tmpMoveDir[2]) > 0.001 &&
+					Math.abs(tmpActualMove[2]) < 0.001
 				) {
 					this.velocity[2] = 0;
 				}
@@ -478,7 +473,7 @@ export class Enemy {
 			vec3.copy(this.position, safePos);
 		} else {
 			// No physics - just move directly
-			vec3.copy(this.position, newPos);
+			vec3.copy(this.position, tmpNewPos);
 		}
 
 		// Update animations

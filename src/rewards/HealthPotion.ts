@@ -166,12 +166,10 @@ export class HealthPotion extends Pickup {
 	protected onCollect(game: Game): void {
 		// Heal the player (don't exceed max health)
 		if (game.player) {
-			const oldHealth = game.player.health;
 			game.player.health = Math.min(
 				game.player.maxHealth,
 				game.player.health + this.healAmount,
 			);
-			const actualHeal = game.player.health - oldHealth;
 		}
 
 		// Spawn collection burst particles

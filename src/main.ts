@@ -26,7 +26,7 @@ import { EntityManager } from "./systems/EntityManager.ts";
 import { ProjectileManager } from "./systems/ProjectileManager.ts";
 import { RewardSystem } from "./systems/RewardSystem.ts";
 import { GameState, UIManager } from "./systems/UIManager.ts";
-import { UpgradeSystem } from "./systems/UpgradeSystem.ts";
+import { UpgradeSystem, type Upgrade } from "./systems/UpgradeSystem.ts";
 import { ParticleSystem } from "./vfx/ParticleSystem.ts";
 import { FireballWeapon } from "./weapons/FireballWeapon.ts";
 import fragmentShaderSource from "./shaders/basic.frag?raw";
@@ -776,7 +776,7 @@ export class Game {
 		this.uiManager.showLevelUpModal(visibleUpgrades, mysteryUpgrade);
 	}
 
-	private handleUpgradeSelected(upgrade: any): void {
+	private handleUpgradeSelected(upgrade: Upgrade): void {
 		if (!this.player) return;
 
 		// Apply the upgrade effect
