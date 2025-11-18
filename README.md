@@ -6,6 +6,8 @@ The fantastic 3D Assets were made by [Kay Lousberg](https://kaylousberg.itch.io/
 
 [Play the game in your browser](https://melchizedek6809.github.io/goblin-grinder/)
 
+![Goblin Grinder gameplay](./screenshot.webp)
+
 ## Features
 
 - **Custom WebGL2 Renderer** - No game engine, built from scratch
