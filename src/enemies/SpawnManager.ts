@@ -4,7 +4,6 @@ import { createSphereCollider } from "../physics/Collider.ts";
 import type { Physics } from "../physics/Physics.ts";
 import type { Player } from "../objects/Player.ts";
 import { StaticBush } from "../objects/StaticBush.ts";
-import { StaticGrass } from "../objects/StaticGrass.ts";
 import { StaticRock } from "../objects/StaticRock.ts";
 import { StaticTree } from "../objects/StaticTree.ts";
 import type { Renderable } from "../rendering/Renderable.ts";
@@ -314,22 +313,6 @@ export class SpawnManager {
 			if (!spawnType) continue;
 
 			switch (spawnType) {
-				case "grass": {
-					const grass = new StaticGrass(atlas.getRandomGrass());
-					this.placeStaticObject(
-						grass,
-						x,
-						z,
-						{
-							yOffset: -0.5,
-							scaleRange: [0.8, 1.25],
-							spacingRadius: 0.35,
-						},
-						placements,
-						entities,
-					);
-					break;
-				}
 				case "bush": {
 					const bush = new StaticBush(atlas.getRandomBush());
 					this.placeStaticObject(
@@ -428,40 +411,35 @@ export class SpawnManager {
 		density: number,
 		typeBias: number,
 		rockBias: number,
-	): "grass" | "bush" | "tree" | "rock" | null {
+	): "bush" | "tree" | "rock" | null {
 		const weights = {
-			grass: 0,
 			bush: 0,
 			tree: 0,
 			rock: 0,
 		};
 
-		switch (tier) {
-			case "clear":
-				weights.grass = 0.8;
-				weights.rock = 0.5;
-				weights.bush = 0.08;
-				weights.tree = 0.05;
-				break;
-			case "light":
-				weights.grass = 0.6;
-				weights.bush = 0.3;
-				weights.tree = 0.2;
-				weights.rock = 0.3;
-				break;
-			case "mixed":
-				weights.grass = 0.2;
-				weights.bush = 0.4;
-				weights.tree = 0.35;
-				weights.rock = 0.15;
-				break;
-			case "dense":
-				weights.grass = 0.08;
-				weights.bush = 0.22;
-				weights.tree = 0.6;
-				weights.rock = 0.05;
-				break;
-		}
+			switch (tier) {
+				case "clear":
+					weights.rock = 0.65;
+					weights.bush = 0.06;
+					weights.tree = 0.1;
+					break;
+				case "light":
+					weights.bush = 0.35;
+					weights.tree = 0.45;
+					weights.rock = 0.5;
+					break;
+				case "mixed":
+					weights.bush = 0.3;
+					weights.tree = 0.55;
+					weights.rock = 0.3;
+					break;
+				case "dense":
+					weights.bush = 0.15;
+					weights.tree = 0.75;
+					weights.rock = 0.12;
+					break;
+			}
 
 		// Tilt tree vs bush composition by noise for regional differences
 		const treeBias = 0.8 + typeBias * 0.6;
@@ -472,17 +450,13 @@ export class SpawnManager {
 		const rockFactor = (1 - density) * (0.6 + rockBias * 0.6);
 		weights.rock *= rockFactor;
 
-		// Keep some grasses everywhere to break up repetition
-		weights.grass *= 0.6 + (1 - typeBias) * 0.4;
-
-		const total = weights.grass + weights.bush + weights.tree + weights.rock;
+		const total = weights.bush + weights.tree + weights.rock;
 
 		if (total <= 0.0001) return null;
 
 		const roll = Math.random() * total;
-		if (roll < weights.grass) return "grass";
-		if (roll < weights.grass + weights.bush) return "bush";
-		if (roll < weights.grass + weights.bush + weights.tree) return "tree";
+		if (roll < weights.bush) return "bush";
+		if (roll < weights.bush + weights.tree) return "tree";
 		return "rock";
 	}
 

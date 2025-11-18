@@ -25,10 +25,6 @@ import rock1DGlbUrl from "../assets/models/Rock1D.glb?url";
 import rock1FGlbUrl from "../assets/models/Rock1F.glb?url";
 import rock1GGlbUrl from "../assets/models/Rock1G.glb?url";
 import skeletonPngUrl from "../assets/models/Skeleton.png";
-import grass1AGlbUrl from "../assets/models/Grass1A.glb?url";
-import grass1BGlbUrl from "../assets/models/Grass1B.glb?url";
-import grass1CGlbUrl from "../assets/models/Grass1C.glb?url";
-import grass1DGlbUrl from "../assets/models/Grass1D.glb?url";
 import tree1AGlbUrl from "../assets/models/Tree1A.glb?url";
 import tree1BGlbUrl from "../assets/models/Tree1B.glb?url";
 import tree2AGlbUrl from "../assets/models/Tree2A.glb?url";
@@ -82,12 +78,6 @@ export class MeshAtlas {
 	public bush2E: Mesh | null = null;
 	public bush2F: Mesh | null = null;
 
-	// Grass meshes (single mesh each)
-	public grass1A: Mesh | null = null;
-	public grass1B: Mesh | null = null;
-	public grass1C: Mesh | null = null;
-	public grass1D: Mesh | null = null;
-
 	// Pickup meshes (single mesh each)
 	public chest: Mesh | null = null;
 	public chestGold: Mesh | null = null;
@@ -124,10 +114,6 @@ export class MeshAtlas {
 			Mesh.fromUrl(gl, bush2DGlbUrl, naturePngUrl),
 			Mesh.fromUrl(gl, bush2EGlbUrl, naturePngUrl),
 			Mesh.fromUrl(gl, bush2FGlbUrl, naturePngUrl),
-			Mesh.fromUrl(gl, grass1AGlbUrl, naturePngUrl),
-			Mesh.fromUrl(gl, grass1BGlbUrl, naturePngUrl),
-			Mesh.fromUrl(gl, grass1CGlbUrl, naturePngUrl),
-			Mesh.fromUrl(gl, grass1DGlbUrl, naturePngUrl),
 		]).then(
 			([
 				tree1A,
@@ -145,10 +131,6 @@ export class MeshAtlas {
 				bush2D,
 				bush2E,
 				bush2F,
-				grass1A,
-				grass1B,
-				grass1C,
-				grass1D,
 			]) => {
 				this.tree1A = tree1A;
 				this.tree1B = tree1B;
@@ -165,10 +147,6 @@ export class MeshAtlas {
 				this.bush2D = bush2D;
 				this.bush2E = bush2E;
 				this.bush2F = bush2F;
-				this.grass1A = grass1A;
-				this.grass1B = grass1B;
-				this.grass1C = grass1C;
-				this.grass1D = grass1D;
 			},
 		);
 
@@ -408,20 +386,6 @@ export class MeshAtlas {
 		) as Mesh[];
 
 		return bushes[Math.floor(Math.random() * bushes.length)];
-	}
-
-	/**
-	 * Get a random grass mesh for variety
-	 */
-	getRandomGrass(): Mesh {
-		const grass = [
-			this.grass1A,
-			this.grass1B,
-			this.grass1C,
-			this.grass1D,
-		].filter((g) => g !== null) as Mesh[];
-
-		return grass[Math.floor(Math.random() * grass.length)];
 	}
 
 	/**
