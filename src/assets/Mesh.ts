@@ -157,23 +157,60 @@ export class Mesh {
 
 	static createPlane(gl: WebGL2RenderingContext): Mesh {
 		// Plane vertices in XZ plane: position (3), normal (3), uv (2), color (3)
-		const vertices = new Float32Array([
-			// Green ground plane
-			// pos.x, pos.y, pos.z, norm.x, norm.y, norm.z, uv.x, uv.y, col.r, col.g, col.b
-			-0.5, 0.0, -0.5, 0.0, 1.0, 0.0, 0.0, 0.0, 0.3, 0.6, 0.3, 0.5, 0.0, -0.5,
-			0.0, 1.0, 0.0, 1.0, 0.0, 0.3, 0.6, 0.3, 0.5, 0.0, 0.5, 0.0, 1.0, 0.0, 1.0,
-			1.0, 0.3, 0.6, 0.3, -0.5, 0.0, 0.5, 0.0, 1.0, 0.0, 0.0, 1.0, 0.3, 0.6,
-			0.3,
-		]);
+		// Subdivided to avoid a single giant quad (better lighting and deforms)
+		const segments = 64;
+		const vertsPerSide = segments + 1;
+		const vertexCount = vertsPerSide * vertsPerSide;
+		const indicesPerQuad = 6;
+		const quadCount = segments * segments;
 
-		const indices = new Uint16Array([
-			0,
-			2,
-			1,
-			0,
-			3,
-			2, // Two triangles forming a quad with upward-facing winding
-		]);
+		const vertices = new Float32Array(vertexCount * 11);
+		const indices = new Uint16Array(quadCount * indicesPerQuad);
+
+		const halfSize = 0.5;
+		let vIndex = 0;
+		for (let z = 0; z < vertsPerSide; z++) {
+			for (let x = 0; x < vertsPerSide; x++) {
+				const u = x / segments;
+				const v = z / segments;
+				const posX = -halfSize + u;
+				const posZ = -halfSize + v;
+
+				vertices.set(
+					[
+						posX,
+						0.0,
+						posZ, // position
+						0.0,
+						1.0,
+						0.0, // normal
+						u,
+						v, // uv
+						0.3,
+						0.6,
+						0.3, // color (greenish)
+					],
+					vIndex * 11,
+				);
+				vIndex++;
+			}
+		}
+
+		let iIndex = 0;
+		for (let z = 0; z < segments; z++) {
+			for (let x = 0; x < segments; x++) {
+				const topLeft = z * vertsPerSide + x;
+				const topRight = topLeft + 1;
+				const bottomLeft = topLeft + vertsPerSide;
+				const bottomRight = bottomLeft + 1;
+
+				indices.set(
+					[topLeft, bottomLeft, topRight, topRight, bottomLeft, bottomRight],
+					iIndex,
+				);
+				iIndex += indicesPerQuad;
+			}
+		}
 
 		return new Mesh(gl, vertices, indices);
 	}

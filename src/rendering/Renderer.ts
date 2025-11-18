@@ -118,6 +118,7 @@ export class Renderer {
 		// Set camera uniforms
 		shader.setUniformMatrix4fv("u_view", camera.getViewMatrix());
 		shader.setUniformMatrix4fv("u_projection", camera.getProjectionMatrix());
+		shader.setUniform3fv("u_cameraPosition", camera.position);
 		shader.setUniform1f("u_time", time);
 
 		// Bind noise texture for cloud shadows (use texture slot 5)

@@ -11,6 +11,7 @@ in vec4 v_lightSpacePosition;
 uniform sampler2D u_shadowMap;
 uniform vec3 u_lightPosition;
 uniform vec3 u_lightColor;
+uniform vec3 u_cameraPosition;
 
 uniform sampler2D u_texture;
 uniform bool u_useTexture;
@@ -27,8 +28,8 @@ float cloudShadow(vec2 worldPos, float time) {
     // Single sample for performance
     float cloudPattern = texture(u_noiseTexture, cloudCoord).r;
 
-    // Map to shadow intensity with sharper threshold for more clustered clouds
-    return smoothstep(0.42, 0.58, cloudPattern);
+    // Map to shadow intensity with tighter threshold (fewer clouds, but stronger presence)
+    return smoothstep(0.25, 0.45, cloudPattern);
 }
 
 float calculateShadow(vec4 lightSpacePos, vec3 normal, vec3 lightDir) {
@@ -95,8 +96,14 @@ void main() {
     float shadow = calculateShadow(v_lightSpacePosition, normal, lightDir);
     finalColor += color * u_lightColor * diffuse * (1.0 - shadow * 0.8);
 
+    // Rim lighting to outline silhouettes
+    vec3 viewDir = normalize(u_cameraPosition - v_worldPosition);
+    float rim = pow(1.0 - max(dot(viewDir, normal), 0.0), 2.4);
+    vec3 rimColor = mix(color, u_lightColor, 0.35);
+    finalColor += rimColor * rim * 0.55;
+
     // Apply cloud shadows (darken areas under clouds)
-    finalColor *= mix(0.5, 1.0, cloudShade);
+    finalColor *= mix(0.55, 1.0, cloudShade);
 
     fragColor = vec4(finalColor, 1.0);
 }
