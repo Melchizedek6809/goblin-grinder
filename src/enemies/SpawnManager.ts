@@ -418,28 +418,28 @@ export class SpawnManager {
 			rock: 0,
 		};
 
-			switch (tier) {
-				case "clear":
-					weights.rock = 0.65;
-					weights.bush = 0.06;
-					weights.tree = 0.1;
-					break;
-				case "light":
-					weights.bush = 0.35;
-					weights.tree = 0.45;
-					weights.rock = 0.5;
-					break;
-				case "mixed":
-					weights.bush = 0.3;
-					weights.tree = 0.55;
-					weights.rock = 0.3;
-					break;
-				case "dense":
-					weights.bush = 0.15;
-					weights.tree = 0.75;
-					weights.rock = 0.12;
-					break;
-			}
+		switch (tier) {
+			case "clear":
+				weights.rock = 0.65;
+				weights.bush = 0.06;
+				weights.tree = 0.1;
+				break;
+			case "light":
+				weights.bush = 0.35;
+				weights.tree = 0.45;
+				weights.rock = 0.5;
+				break;
+			case "mixed":
+				weights.bush = 0.3;
+				weights.tree = 0.55;
+				weights.rock = 0.3;
+				break;
+			case "dense":
+				weights.bush = 0.15;
+				weights.tree = 0.75;
+				weights.rock = 0.12;
+				break;
+		}
 
 		// Tilt tree vs bush composition by noise for regional differences
 		const treeBias = 0.8 + typeBias * 0.6;

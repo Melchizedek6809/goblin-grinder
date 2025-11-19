@@ -18,7 +18,7 @@ export class MainMenu extends LitElement {
 			width: 100%;
 			height: 100%;
 			pointer-events: none;
-			font-family: "Space Mono", "Fira Code", monospace;
+			font-family: Georgia, "Times New Roman", serif;
 		}
 
 		:host([visible]) {
@@ -34,17 +34,10 @@ export class MainMenu extends LitElement {
 			align-items: center;
 			justify-content: center;
 			gap: 30px;
-			background: radial-gradient(
-					circle at top,
-					rgba(44, 255, 201, 0.15),
-					transparent 45%
-				),
-				radial-gradient(
-					circle at bottom,
-					rgba(255, 115, 137, 0.16),
-					transparent 40%
-				),
-				linear-gradient(135deg, rgba(9, 9, 9, 0.95), rgba(10, 5, 20, 0.95));
+			background:
+				radial-gradient(circle at 20% 15%, rgba(255, 228, 179, 0.07), transparent 25%),
+				radial-gradient(circle at 80% 20%, rgba(120, 183, 255, 0.1), transparent 30%),
+				conic-gradient(from 140deg at 50% 60%, rgba(14, 19, 41, 0.7), rgba(9, 10, 18, 0.95), rgba(24, 20, 48, 0.7));
 			overflow: hidden;
 		}
 
@@ -52,9 +45,12 @@ export class MainMenu extends LitElement {
 			content: "";
 			position: absolute;
 			inset: 0;
-			background-image: url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 60h120M60 0v120' stroke='rgba(255,255,255,0.025)' stroke-width='1'/%3E%3C/svg%3E");
-			opacity: 0.6;
-			mix-blend-mode: screen;
+			background:
+				linear-gradient(90deg, rgba(255, 231, 186, 0.05) 1px, transparent 1px),
+				linear-gradient(180deg, rgba(255, 231, 186, 0.05) 1px, transparent 1px);
+			background-size: 120px 120px;
+			opacity: 0.7;
+			mix-blend-mode: soft-light;
 			pointer-events: none;
 		}
 
@@ -64,43 +60,63 @@ export class MainMenu extends LitElement {
 			flex-direction: column;
 			align-items: center;
 			gap: 18px;
-			padding: 48px 56px;
-			background: rgba(12, 9, 18, 0.75);
-			border: 1px solid rgba(255, 255, 255, 0.12);
-			border-radius: 24px;
+			padding: 52px 64px;
+			background: radial-gradient(circle at 30% 30%, rgba(255, 245, 223, 0.06), transparent 35%),
+				radial-gradient(circle at 70% 70%, rgba(158, 202, 255, 0.06), transparent 35%),
+				rgba(10, 12, 24, 0.86);
+			border: 1px solid rgba(255, 223, 152, 0.5);
+			border-radius: 28px;
 			box-shadow:
-				0 25px 60px rgba(0, 0, 0, 0.7),
-				0 0 40px rgba(0, 255, 153, 0.08);
-			backdrop-filter: blur(18px);
+				0 26px 60px rgba(0, 0, 0, 0.6),
+				0 0 38px rgba(255, 223, 152, 0.06),
+				inset 0 0 0 1px rgba(93, 159, 255, 0.18);
+			backdrop-filter: blur(16px);
 			text-align: center;
 			max-width: 520px;
 			width: calc(100% - 40px);
 		}
 
+		.panel::before,
+		.panel::after {
+			content: "";
+			position: absolute;
+			inset: 14px;
+			border: 1px solid rgba(93, 159, 255, 0.25);
+			border-radius: 20px;
+			pointer-events: none;
+		}
+
+		.panel::after {
+			inset: 20px 28px;
+			border-image: linear-gradient(90deg, rgba(255, 223, 152, 0.5), rgba(93, 159, 255, 0.5), rgba(255, 223, 152, 0.5)) 1;
+			opacity: 0.75;
+		}
+
 		.title {
 			font-size: 48px;
-			color: #ffffff;
+			color: #f6e3bf;
 			margin-bottom: 20px;
 			text-transform: uppercase;
-			letter-spacing: 6px;
+			letter-spacing: 5px;
 			text-shadow:
-				0 0 12px rgba(0, 255, 153, 0.4),
-				0 0 20px rgba(255, 71, 120, 0.35);
+				0 0 10px rgba(255, 223, 152, 0.28),
+				0 0 16px rgba(93, 159, 255, 0.2);
 		}
 
 		.emblem {
 			width: 72px;
 			height: 72px;
 			border-radius: 50%;
-			background: radial-gradient(circle, #1fdfb4 0%, #14a570 45%, #0b4535 100%);
+			background: radial-gradient(circle, #f4e3b7 0%, #cda86f 45%, #4b3724 100%);
 			display: flex;
 			align-items: center;
 			justify-content: center;
-			color: #06110f;
+			color: #140f0c;
 			font-size: 32px;
 			box-shadow:
-				inset 0 4px 12px rgba(255, 255, 255, 0.3),
-				0 18px 30px rgba(0, 0, 0, 0.55);
+				inset 0 6px 14px rgba(255, 255, 255, 0.18),
+				0 16px 28px rgba(0, 0, 0, 0.5),
+				0 0 26px rgba(255, 223, 152, 0.2);
 			position: relative;
 		}
 
@@ -109,7 +125,7 @@ export class MainMenu extends LitElement {
 			position: absolute;
 			inset: -12px;
 			border-radius: 50%;
-			border: 1px dashed rgba(31, 223, 180, 0.3);
+			border: 1px dashed rgba(255, 223, 152, 0.4);
 			animation: pulse 6s linear infinite;
 		}
 
@@ -131,12 +147,15 @@ export class MainMenu extends LitElement {
 		.divider {
 			width: 100%;
 			height: 1px;
-			background: linear-gradient(
-				90deg,
-				transparent,
-				rgba(255, 255, 255, 0.4),
-				transparent
-			);
+			background: linear-gradient(90deg, transparent, rgba(255, 223, 152, 0.55), transparent);
+		}
+
+		.subtitle {
+			font-size: 15px;
+			letter-spacing: 3px;
+			text-transform: uppercase;
+			color: rgba(246, 227, 191, 0.8);
+			text-shadow: 0 0 10px rgba(93, 159, 255, 0.25);
 		}
 
 		@media (max-width: 650px) {
@@ -166,26 +185,28 @@ export class MainMenu extends LitElement {
 		.button {
 			font-size: 24px;
 			padding: 12px 32px;
-			background: linear-gradient(135deg, #19d49d, #13a77a);
+			background:
+				linear-gradient(90deg, rgba(255, 223, 152, 0.95), rgba(122, 171, 255, 0.9)),
+				radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.2), transparent 40%);
 			color: #ffffff;
-			border: none;
-			border-radius: 999px;
+			border: 1px solid rgba(255, 223, 152, 0.8);
+			border-radius: 16px;
 			cursor: pointer;
-			transition: transform 0.2s, box-shadow 0.2s;
-			font-weight: 700;
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+			font-weight: 600;
 			touch-action: manipulation;
 			-webkit-tap-highlight-color: rgba(255, 255, 255, 0.1);
 			min-width: 220px;
 			box-shadow:
-				0 12px 30px rgba(0, 0, 0, 0.5),
-				0 0 18px rgba(25, 212, 157, 0.55);
+				0 10px 24px rgba(0, 0, 0, 0.45),
+				0 0 18px rgba(255, 223, 152, 0.28);
 		}
 
 		.button:hover {
-			transform: translateY(-3px) scale(1.02);
+			transform: translateY(-3px);
 			box-shadow:
-				0 18px 40px rgba(0, 0, 0, 0.4),
-				0 0 26px rgba(25, 212, 157, 0.7);
+				0 16px 34px rgba(0, 0, 0, 0.42),
+				0 0 24px rgba(122, 171, 255, 0.48);
 		}
 
 		.button:active {
@@ -201,8 +222,8 @@ export class MainMenu extends LitElement {
 		.button:disabled:hover {
 			transform: none;
 			box-shadow:
-				0 12px 30px rgba(0, 0, 0, 0.5),
-				0 0 18px rgba(25, 212, 157, 0.55);
+				0 10px 24px rgba(0, 0, 0, 0.45),
+				0 0 16px rgba(255, 223, 152, 0.24);
 		}
 
 		.hints {
@@ -214,7 +235,7 @@ export class MainMenu extends LitElement {
 		}
 
 		.hint {
-			color: rgba(255, 255, 255, 0.85);
+			color: rgba(246, 227, 191, 0.9);
 			font-size: 15px;
 			display: flex;
 			flex-direction: column;
@@ -225,7 +246,7 @@ export class MainMenu extends LitElement {
 			font-size: 12px;
 			text-transform: uppercase;
 			letter-spacing: 2px;
-			color: rgba(255, 255, 255, 0.45);
+			color: rgba(122, 171, 255, 0.6);
 		}
 
 		@media (max-width: 560px) {
@@ -261,6 +282,7 @@ export class MainMenu extends LitElement {
 				<div class="panel">
 					<div class="emblem">⚔️</div>
 					<div class="title">Goblin Grinder</div>
+					<div class="subtitle">Trials of steel and arcana</div>
 					<div class="divider"></div>
 					<div class="hints">
 						<div class="hint">

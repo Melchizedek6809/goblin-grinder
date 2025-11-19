@@ -40,7 +40,9 @@ export class LevelUpModal extends LitElement {
 			display: flex;
 			align-items: center;
 			justify-content: center;
-			background: rgba(5, 8, 20, 0.7);
+			background: radial-gradient(circle at 20% 20%, rgba(255, 223, 152, 0.04), transparent 35%),
+				radial-gradient(circle at 80% 80%, rgba(122, 171, 255, 0.04), transparent 40%),
+				rgba(6, 8, 18, 0.82);
 			opacity: 0;
 			pointer-events: none;
 			transition: opacity 0.15s ease;
@@ -52,29 +54,55 @@ export class LevelUpModal extends LitElement {
 		}
 
 		.modal {
-			background: rgba(7, 12, 25, 0.95);
-			border: 2px solid rgba(59, 224, 255, 0.6);
-			box-shadow: 0 0 24px rgba(35, 139, 255, 0.8);
-			padding: 32px;
-			border-radius: 12px;
+			background: linear-gradient(145deg, rgba(12, 13, 26, 0.96), rgba(8, 9, 18, 0.94)),
+				radial-gradient(circle at 12% 20%, rgba(255, 223, 152, 0.12), transparent 35%),
+				radial-gradient(circle at 88% 80%, rgba(122, 171, 255, 0.12), transparent 35%);
+			border: 1px solid rgba(255, 223, 152, 0.6);
+			box-shadow:
+				0 24px 58px rgba(0, 0, 0, 0.6),
+				0 0 30px rgba(93, 159, 255, 0.16);
+			padding: 34px 38px;
+			border-radius: 18px;
 			max-width: min(95vw, 920px);
 			text-align: center;
-			font-family: monospace;
-			color: #e8f4ff;
+			font-family: Georgia, "Times New Roman", serif;
+			color: #f6e3bf;
+			position: relative;
+			overflow: visible;
+		}
+
+		.modal::before,
+		.modal::after {
+			content: "";
+			position: absolute;
+			inset: 10px;
+			border: 1px solid rgba(93, 159, 255, 0.2);
+			border-radius: 12px;
+			pointer-events: none;
+		}
+
+		.modal::after {
+			inset: 24px 18px;
+			border-image: linear-gradient(90deg, rgba(255, 223, 152, 0.4), rgba(93, 159, 255, 0.4), rgba(255, 223, 152, 0.4)) 1;
+			opacity: 0.8;
 		}
 
 		.modal h2 {
 			margin: 0 0 8px;
 			font-size: 28px;
-			color: #3be0ff;
-			text-shadow: 0 0 8px rgba(59, 224, 255, 0.6);
-			font-family: 'Georgia', serif;
+			letter-spacing: 3px;
+			color: #f6e3bf;
+			text-shadow:
+				0 0 8px rgba(255, 223, 152, 0.32),
+				0 0 14px rgba(93, 159, 255, 0.18);
+			text-transform: uppercase;
 		}
 
 		.modal p {
-			margin: 0 0 24px;
-			color: #b7c6ff;
+			margin: 0 0 20px;
+			color: rgba(246, 227, 191, 0.85);
 			font-size: 16px;
+			letter-spacing: 1px;
 		}
 
 		.cards-container {
@@ -83,6 +111,30 @@ export class LevelUpModal extends LitElement {
 			gap: 16px;
 			justify-items: center;
 			padding: 8px;
+			position: relative;
+		}
+
+		.cards-container::before,
+		.cards-container::after {
+			content: "";
+			position: absolute;
+			width: 32px;
+			height: 32px;
+			border: 1px solid rgba(255, 223, 152, 0.35);
+		}
+
+		.cards-container::before {
+			top: -6px;
+			left: -6px;
+			border-right: none;
+			border-bottom: none;
+		}
+
+		.cards-container::after {
+			bottom: -6px;
+			right: -6px;
+			border-left: none;
+			border-top: none;
 		}
 
 		/* Tablet and mobile: 2x2 grid with smaller cards */
@@ -93,7 +145,7 @@ export class LevelUpModal extends LitElement {
 			}
 
 			.modal {
-				padding: 20px;
+				padding: 22px;
 				max-width: 95vw;
 			}
 
@@ -102,7 +154,7 @@ export class LevelUpModal extends LitElement {
 			}
 
 			.modal p {
-				margin-bottom: 16px;
+				margin-bottom: 14px;
 				font-size: 14px;
 			}
 		}
@@ -197,8 +249,8 @@ export class LevelUpModal extends LitElement {
 		return html`
 			<div class="backdrop ${this.visible ? "visible" : ""}">
 				<div class="modal">
-					<h2>Level Up!</h2>
-					<p>Choose your destiny:</p>
+					<h2>Level Up</h2>
+					<p>Draw an arcana and claim its omen.</p>
 					<div class="cards-container" @card-selected=${this.handleCardSelected}>
 						${this.upgrades.slice(0, 3).map(
 							(upgrade, index) => html`

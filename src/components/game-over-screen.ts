@@ -27,7 +27,10 @@ export class GameOverScreen extends LitElement {
 		.overlay {
 			width: 100%;
 			height: 100%;
-			background-color: rgba(0, 0, 0, 0.85);
+			background:
+				radial-gradient(circle at 20% 20%, rgba(255, 223, 152, 0.06), transparent 35%),
+				radial-gradient(circle at 80% 70%, rgba(122, 171, 255, 0.06), transparent 35%),
+				rgba(6, 6, 12, 0.92);
 			display: flex;
 			flex-direction: column;
 			align-items: center;
@@ -36,19 +39,24 @@ export class GameOverScreen extends LitElement {
 		}
 
 		.title {
-			font-family: monospace;
-			font-size: 56px;
-			color: #ff3333;
-			text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.9);
+			font-family: Georgia, "Times New Roman", serif;
+			font-size: 54px;
+			color: #f6e3bf;
+			text-shadow:
+				0 0 10px rgba(255, 223, 152, 0.28),
+				0 0 18px rgba(122, 171, 255, 0.16);
 			margin-bottom: 10px;
+			letter-spacing: 4px;
+			text-transform: uppercase;
+			position: relative;
 		}
 
 		.score-text {
-			font-family: monospace;
-			font-size: 32px;
-			color: #ffffff;
-			text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-			margin-bottom: 20px;
+			font-family: Georgia, "Times New Roman", serif;
+			font-size: 24px;
+			color: rgba(246, 227, 191, 0.9);
+			text-shadow: 0 0 8px rgba(93, 159, 255, 0.16);
+			margin-bottom: 14px;
 		}
 
 		.buttons {
@@ -57,41 +65,41 @@ export class GameOverScreen extends LitElement {
 		}
 
 		.button {
-			font-family: monospace;
+			font-family: "Courier New", monospace;
 			font-size: 24px;
-			padding: 12px 32px;
-			background-color: #4a4a4a;
-			color: #ffffff;
-			border: 2px solid #666666;
-			border-radius: 4px;
+			padding: 12px 30px;
+			background: linear-gradient(135deg, rgba(255, 223, 152, 0.92), rgba(122, 171, 255, 0.9));
+			color: #0f101a;
+			border: 1px solid rgba(255, 223, 152, 0.8);
+			border-radius: 14px;
 			cursor: pointer;
 			transition: all 0.2s;
-			text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+			text-shadow: none;
+			box-shadow:
+				0 10px 18px rgba(0, 0, 0, 0.42),
+				0 0 16px rgba(255, 223, 152, 0.18);
 		}
 
 		.button:hover {
-			background-color: #5a5a5a;
-			border-color: #888888;
-			transform: translateY(-2px);
+			transform: translateY(-3px);
+			box-shadow:
+				0 14px 26px rgba(0, 0, 0, 0.44),
+				0 0 22px rgba(122, 171, 255, 0.32);
 		}
 
 		.button:active {
-			background-color: #3a3a3a;
-			transform: translateY(0);
+			transform: translateY(-1px);
 		}
 
 		.button.primary {
-			background-color: #ff6633;
-			border-color: #ff8855;
+			background: linear-gradient(135deg, rgba(93, 159, 255, 0.95), rgba(255, 223, 152, 0.9));
+			border-color: rgba(122, 171, 255, 0.9);
 		}
 
 		.button.primary:hover {
-			background-color: #ff7744;
-			border-color: #ff9966;
-		}
-
-		.button.primary:active {
-			background-color: #ee5522;
+			box-shadow:
+				0 16px 30px rgba(0, 0, 0, 0.5),
+				0 0 28px rgba(93, 159, 255, 0.5);
 		}
 
 		@media (max-width: 550px) {
